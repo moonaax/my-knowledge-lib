@@ -270,3 +270,25 @@ async def main():
 生产环境部署            → LangGraph（最成熟）
 快速原型验证            → CrewAI（最简单）
 ```
+
+---
+
+## 面试题精选
+
+### Q1: AutoGen、CrewAI、LangGraph 三个多 Agent 框架怎么选？
+**答：** AutoGen 适合对话驱动的复杂推理和代码生成；CrewAI 最简单，适合角色明确的团队协作和快速原型；LangGraph 最成熟，适合需要精细流程控制的生产环境。快速验证选 CrewAI，生产部署选 LangGraph。
+
+### Q2: AutoGen 的 UserProxyAgent 和 AssistantAgent 分别是什么角色？
+**答：** AssistantAgent 是 AI 助手，负责推理和生成（如写代码）。UserProxyAgent 代表用户，可以自动执行 AssistantAgent 生成的代码并返回结果，形成"生成-执行-反馈"的闭环。
+
+### Q3: CrewAI 中 Agent、Task、Crew 三个概念的关系是什么？
+**答：** Agent 是有角色和目标的智能体，Task 是具体的任务描述和期望输出，Crew 是 Agent 团队按指定流程（顺序/层级）协作执行 Task。Task 可以指定依赖关系，后续 Task 能获取前置 Task 的输出。
+
+### Q4: 多 Agent 系统中如何控制成本？
+**答：** 监控每个 Agent 的 Token 使用量、设置预算上限、限制最大对话轮次（max_round）、用更便宜的模型处理简单 Agent 的任务、缓存重复查询结果、减少不必要的 Agent 间对话。
+
+### Q5: 多 Agent 协作有哪些常见模式？各自适合什么场景？
+**答：** 顺序流水线（A→B→C，适合有先后关系的任务）、层级模式（Manager 分配任务给 Worker，适合复杂项目）、辩论模式（正反方辩论+裁判，适合决策分析）、投票模式（多 Agent 独立回答取共识，适合需要可靠性的场景）。
+
+### Q6: MetaGPT 的设计理念是什么？和其他框架有什么不同？
+**答：** MetaGPT 模拟真实软件公司的组织结构（产品经理→架构师→工程师→QA），每个角色有标准化的输入输出（PRD、设计文档、代码、测试用例）。它更关注软件开发全流程的自动化，而非通用的多 Agent 协作。

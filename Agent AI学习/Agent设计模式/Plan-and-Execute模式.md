@@ -243,3 +243,22 @@ result = app.invoke({"goal": "分析项目代码质量并生成报告", "results
 5. 撰写分析结论和建议
 6. 输出 PDF 报告
 ```
+
+---
+
+## 面试题精选
+
+### Q1: Plan-and-Execute 和 ReAct 的核心区别是什么？
+**答：** ReAct 是"边想边做"，每步都重新推理决策；Plan-and-Execute 是"先想后做"，先制定完整计划再逐步执行。Plan-and-Execute 有全局视角、计划可审查、减少冗余工具调用，更适合目标明确的复杂任务。
+
+### Q2: Plan-and-Execute 中的"重规划"（Re-planning）什么时候触发？
+**答：** 每个子任务执行完后评估结果是否符合预期，如果出现意外情况（工具调用失败、中间结果与预期不符、发现新信息改变了任务方向），就触发重规划调整后续步骤。
+
+### Q3: 如何用 LangGraph 实现 Plan-and-Execute？
+**答：** 定义 State 包含 goal、plan、current_step、results 等字段，创建 planner（规划）、executor（执行）、summarizer（汇总）三个节点，用条件边控制循环执行直到所有步骤完成，最后汇总结果。
+
+### Q4: Plan-and-Execute 模式的主要缺点是什么？
+**答：** 初始规划可能不准确（信息不足时难以制定完美计划）、重规划有额外开销、对于探索性任务不如 ReAct 灵活。如果任务目标模糊或需要大量试错，ReAct 更合适。
+
+### Q5: 实际项目中 Plan-and-Execute 和 ReAct 怎么结合使用？
+**答：** 最佳实践是用 Plan-and-Execute 做顶层规划（拆分大任务为子任务），每个子任务内部用 ReAct 执行（灵活调用工具），执行完每个子任务后检查是否需要重规划。这样兼顾全局规划和局部灵活性。

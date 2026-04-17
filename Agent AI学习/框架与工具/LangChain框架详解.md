@@ -349,3 +349,25 @@ my-agent/
 3. **开启 LangSmith**：调试 Agent 必备
 4. **控制 Agent 循环**：设置 `max_iterations` 防止无限循环
 5. **错误处理**：工具调用可能失败，要有降级方案
+
+---
+
+## 面试题精选
+
+### Q1: LangChain 的核心组件有哪些？各自的作用？
+**答：** Model I/O（统一模型调用接口）、Chains（多步骤串联）、Agents（LLM 自主决策调用工具）、Memory（对话记忆管理）、Retrieval（RAG 检索增强）。核心理念是组件化 + 可组合。
+
+### Q2: LCEL（LangChain Expression Language）是什么？有什么优势？
+**答：** LCEL 用 `|` 管道符组合组件（如 prompt | llm | parser），支持流式输出、异步调用、批量处理、并行执行、重试和回退。优势是代码简洁、自动获得这些能力而无需额外编码。
+
+### Q3: LangChain 和 LangGraph 的关系是什么？什么时候用 LangGraph？
+**答：** LangGraph 是 LangChain 团队推出的有状态 Agent 编排框架。当需要循环执行、条件分支、状态持久化、多 Agent 协作时用 LangGraph。简单的线性 Chain 用 LangChain LCEL 就够了。
+
+### Q4: LangChain 中如何实现带记忆的多轮对话？
+**答：** 使用 RunnableWithMessageHistory 包装 Chain，配合 ChatMessageHistory 存储对话历史。通过 session_id 区分不同会话，每次调用自动加载历史消息并追加新消息。
+
+### Q5: LangSmith 在 Agent 开发中有什么作用？
+**答：** LangSmith 提供完整的调用链路追踪，可以看到每步的输入输出、Token 使用量、延迟、错误详情。对于调试 Agent 的推理过程和工具调用链路至关重要，是生产环境必备的可观测性工具。
+
+### Q6: 使用 LangChain 开发 Agent 有哪些最佳实践？
+**答：** 从简单 Chain 开始，复杂了再用 Agent；工具描述要精确（LLM 靠描述决定调用时机）；开启 LangSmith 追踪；设置 max_iterations 防止无限循环；工具调用要有错误处理和降级方案。

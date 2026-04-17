@@ -260,3 +260,22 @@ router_engine = RouterQueryEngine(
 | 工具编排和 Chain | LangChain |
 | 多 Agent 协作 | LangChain (LangGraph) |
 | 两者结合 | LlamaIndex 做检索 + LangChain 做编排 |
+
+---
+
+## 面试题精选
+
+### Q1: LlamaIndex 和 LangChain 的定位有什么区别？
+**答：** LlamaIndex 专注于数据索引和检索（RAG 专家），LangChain 是通用 LLM 应用框架（瑞士军刀）。构建 RAG/知识库问答优先选 LlamaIndex，构建通用 Agent 选 LangChain，两者可以结合使用。
+
+### Q2: LlamaIndex 支持哪些索引类型？各自适用什么场景？
+**答：** VectorStoreIndex（向量检索，最常用）、SummaryIndex（全文摘要）、KeywordTableIndex（关键词精确匹配）。还支持知识图谱索引。大多数 RAG 场景用 VectorStoreIndex 即可。
+
+### Q3: LlamaIndex 的响应模式（response_mode）有哪些？怎么选？
+**答：** compact（压缩后一次给 LLM，默认通用）、refine（逐文档迭代优化，需要精确回答）、tree_summarize（树形递归摘要，长文档摘要）、no_text（只返回检索结果不生成回答）。
+
+### Q4: SubQuestionQueryEngine 解决了什么问题？
+**答：** 它能自动将复杂问题拆分为多个子问题，分别路由到不同的索引/引擎查询，最后合并结果。适合跨领域的对比分析类问题，如"对比 Android 和后端的架构设计异同"。
+
+### Q5: LlamaIndex 的 Chat Engine 和 Query Engine 有什么区别？
+**答：** Query Engine 是单轮问答，每次查询独立。Chat Engine 支持多轮对话，自动维护对话历史并将历史上下文融入检索和生成过程，能理解代词指代和上下文关联。
