@@ -1,0 +1,272 @@
+# AutoGen 与多 Agent 框架
+
+## 1. 概述
+
+多 Agent 框架让多个 AI Agent 协作完成复杂任务。每个 Agent 有不同的角色和能力，通过对话和协调共同工作。
+
+### 主流框架对比
+
+| 框架 | 厂商 | 核心特点 | 适用场景 |
+|------|------|---------|---------|
+| AutoGen | 微软 | 对话驱动的多 Agent | 复杂推理、代码生成 |
+| CrewAI | 开源社区 | 角色扮演式协作 | 业务流程自动化 |
+| LangGraph | LangChain | 有状态图编排 | 精细控制的 Agent 流程 |
+| MetaGPT | 开源社区 | 软件公司模拟 | 软件开发全流程 |
+
+## 2. AutoGen
+
+### 2.1 核心概念
+
+```
+AutoGen 的核心 = Agent 之间的对话
+
+UserProxy Agent  → 代表用户，可执行代码
+Assistant Agent  → AI 助手，负责推理和生成
+Group Chat       → 多个 Agent 的群聊协作
+```
+
+### 2.2 安装
+
+```bash
+pip install autogen-agentchat autogen-ext[openai]
+```
+
+### 2.3 双 Agent 对话
+
+```python
+from autogen import AssistantAgent, UserProxyAgent
+
+# AI 助手
+assistant = AssistantAgent(
+    name="coder",
+    llm_config={"model": "gpt-4o", "api_key": "your-key"},
+    system_message="你是一个 Python 专家，擅长编写高质量代码。"
+)
+
+# 用户代理（可自动执行代码）
+user_proxy = UserProxyAgent(
+    name="user",
+    human_input_mode="NEVER",       # 不需要人工输入
+    code_execution_config={"work_dir": "coding", "use_docker": False},
+    max_consecutive_auto_reply=5
+)
+
+# 发起对话
+user_proxy.initiate_chat(
+    assistant,
+    message="写一个 Python 脚本，分析 CSV 文件中的销售数据并生成图表"
+)
+```
+
+### 2.4 Group Chat — 多 Agent 协作
+
+```python
+from autogen import GroupChat, GroupChatManager
+
+# 定义多个 Agent
+planner = AssistantAgent(
+    name="planner",
+    system_message="你是项目经理，负责拆解任务和制定计划。",
+    llm_config=llm_config
+)
+
+coder = AssistantAgent(
+    name="coder",
+    system_message="你是开发工程师，负责编写代码。只在需要写代码时发言。",
+    llm_config=llm_config
+)
+
+reviewer = AssistantAgent(
+    name="reviewer",
+    system_message="你是代码审查员，负责 Review 代码质量。只在有代码需要审查时发言。",
+    llm_config=llm_config
+)
+
+# 创建群聊
+group_chat = GroupChat(
+    agents=[user_proxy, planner, coder, reviewer],
+    messages=[],
+    max_round=15,
+    speaker_selection_method="auto"  # LLM 自动选择下一个发言者
+)
+
+manager = GroupChatManager(groupchat=group_chat, llm_config=llm_config)
+
+# 发起群聊
+user_proxy.initiate_chat(
+    manager,
+    message="开发一个 REST API，包含用户注册、登录和个人信息管理功能"
+)
+```
+
+## 3. CrewAI
+
+### 3.1 核心概念
+
+```
+CrewAI 的核心 = 角色 + 任务 + 流程
+
+Agent  → 有角色、目标、背景的智能体
+Task   → 具体的任务描述和期望输出
+Crew   → Agent 团队，按流程协作
+Tool   → Agent 可使用的工具
+```
+
+### 3.2 安装
+
+```bash
+pip install crewai crewai-tools
+```
+
+### 3.3 基础示例
+
+```python
+from crewai import Agent, Task, Crew, Process
+
+# 定义 Agent
+researcher = Agent(
+    role="技术调研员",
+    goal="深入调研技术方案并输出分析报告",
+    backstory="你是一个资深技术专家，擅长技术选型和方案对比分析。",
+    verbose=True,
+    llm="gpt-4o"
+)
+
+writer = Agent(
+    role="技术文档工程师",
+    goal="将技术调研结果整理为清晰易懂的文档",
+    backstory="你擅长将复杂技术概念转化为易于理解的文档。",
+    verbose=True,
+    llm="gpt-4o"
+)
+
+# 定义任务
+research_task = Task(
+    description="调研 2024 年主流的 AI Agent 框架，对比它们的优缺点",
+    expected_output="一份包含至少 5 个框架对比的调研报告",
+    agent=researcher
+)
+
+writing_task = Task(
+    description="基于调研报告，编写一篇技术选型指南",
+    expected_output="一篇结构清晰的技术博客文章",
+    agent=writer,
+    context=[research_task]  # 依赖调研任务的输出
+)
+
+# 组建团队
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    process=Process.sequential,  # 顺序执行
+    verbose=True
+)
+
+# 执行
+result = crew.kickoff()
+print(result)
+```
+
+### 3.4 自定义工具
+
+```python
+from crewai.tools import tool
+
+@tool("搜索技术文档")
+def search_docs(query: str) -> str:
+    """搜索技术文档库获取相关信息"""
+    # 实现搜索逻辑
+    return f"搜索结果: {query}"
+
+# 给 Agent 配备工具
+researcher = Agent(
+    role="调研员",
+    goal="调研技术方案",
+    tools=[search_docs],
+    llm="gpt-4o"
+)
+```
+
+## 4. MetaGPT — 软件公司模拟
+
+MetaGPT 模拟一个软件公司的完整团队：
+
+```
+产品经理 → 需求分析、PRD 文档
+架构师   → 系统设计、技术选型
+工程师   → 代码实现
+QA       → 测试用例、质量保证
+```
+
+```python
+from metagpt.software_company import SoftwareCompany
+from metagpt.roles import ProjectManager, Architect, Engineer, QaEngineer
+
+async def main():
+    company = SoftwareCompany()
+    company.hire([
+        ProjectManager(),
+        Architect(),
+        Engineer(n_borg=3),  # 3个工程师
+        QaEngineer()
+    ])
+    company.invest(investment=10.0)  # 预算（API 费用）
+    company.start_project("开发一个待办事项管理的 Web 应用")
+    await company.run(n_round=5)
+```
+
+## 5. 多 Agent 设计原则
+
+### 5.1 角色设计
+
+```
+好的角色设计:
+✅ 职责单一明确
+✅ 有清晰的输入/输出定义
+✅ 角色之间有互补性
+
+差的角色设计:
+❌ 一个 Agent 什么都做
+❌ 角色职责重叠
+❌ 没有明确的协作流程
+```
+
+### 5.2 协作模式
+
+```
+1. 顺序模式 (Sequential)
+   A → B → C → 输出
+   适合: 流水线式任务
+
+2. 层级模式 (Hierarchical)
+   Manager → [Worker1, Worker2, Worker3]
+   适合: 需要协调的复杂任务
+
+3. 辩论模式 (Debate)
+   Agent1 ⟷ Agent2 → 共识
+   适合: 需要多角度分析的决策
+
+4. 投票模式 (Voting)
+   [Agent1, Agent2, Agent3] → 多数决
+   适合: 需要可靠性的场景
+```
+
+### 5.3 常见陷阱
+
+| 陷阱 | 解决方案 |
+|------|---------|
+| Agent 之间无限对话 | 设置 max_round 限制 |
+| 角色混乱，抢话 | 明确 system_message 中的发言条件 |
+| 成本失控 | 监控 Token 使用，设置预算上限 |
+| 结果不一致 | 加入 Review Agent 做质量把关 |
+
+## 6. 框架选型建议
+
+```
+简单的双 Agent 对话     → AutoGen
+角色明确的团队协作       → CrewAI
+需要精细流程控制         → LangGraph
+模拟软件开发流程         → MetaGPT
+生产环境部署            → LangGraph（最成熟）
+快速原型验证            → CrewAI（最简单）
+```

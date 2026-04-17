@@ -1,38 +1,37 @@
-# Android 面试知识库
+# 个人知识库
 
-基于 Obsidian 构建的 Android 中高级面试知识库，覆盖 10 大模块 57 篇文章，支持 `[[]]` 双链跳转。
+技术学习知识库，使用 Obsidian 管理。
 
-## 模块总览
+## 知识体系
 
-| 模块 | 篇数 | 内容 |
-|------|------|------|
-| Android基础 | 8 | Activity、Service、Fragment、Handler、View绘制、事件分发等 |
-| Android进阶 | 6 | Jetpack、Compose、插件化、APT/KSP |
-| 自定义View | 6 | 绘制流程、自定义属性、事件冲突、Canvas、动画、LayoutManager |
-| 跨进程通信 | 5 | Binder、AIDL、ContentProvider、Messenger、方案选型 |
-| SDK设计 | 6 | API设计、初始化、体积控制、混淆、版本管理、降级策略 |
-| 组件化 | 6 | 架构拆分、组件通信、生命周期、独立运行、资源隔离 |
-| 架构设计 | 4 | MVC/MVP/MVVM/MVI、Clean Architecture、DI、响应式 |
-| 性能优化 | 6 | 内存、启动、卡顿、包体积、网络、电量 |
-| 开源框架 | 5 | OkHttp/Retrofit、Glide/Coil、RxJava、ARouter、LeakCanary |
-| Gradle与构建 | 5 | 生命周期、自定义Plugin、ASM插桩、依赖管理、AAR打包 |
+### 📱 [Android 知识](Android知识/)
 
-## 每篇文章结构
+Android 高级开发完整知识体系，涵盖 10 个模块、57 篇文档。
 
-```
-# 主题名
-## 一、核心概念
-## 二、原理与源码
-## 三、面试题（Q&A 格式）
-## 四、实战与踩坑
-```
+| 模块 | 核心内容 |
+|------|---------|
+| Android基础 | Activity、Fragment、Service、Handler、事件分发、View绘制 |
+| Android进阶 | Compose、Jetpack 系列、插件化热修复、APT/KSP |
+| 性能优化 | 启动、内存、卡顿、包体积、电量、网络 |
+| 自定义View | 绘制流程、Canvas/Paint、动画、事件冲突 |
+| 组件化 | 架构拆分、组件通信、资源隔离、生命周期 |
+| 跨进程通信 | Binder、AIDL、Messenger、ContentProvider |
+| Gradle与构建 | 生命周期/Task、Transform/ASM、Plugin、依赖管理 |
+| 开源框架 | OkHttp/Retrofit、Glide/Coil、RxJava、ARouter |
+| 架构设计 | MVC/MVP/MVVM/MVI、Clean Architecture、依赖注入 |
+| SDK设计 | API设计、初始化策略、版本管理、混淆、降级 |
 
-## 使用方式
+### 🤖 [Agent AI 学习](Agent%20AI学习/)
 
-1. 用 [Obsidian](https://obsidian.md/) 打开本仓库根目录作为 Vault
-2. 从 `Android面试题.md` 主索引开始浏览
-3. 通过 `[[]]` 双链在文章间跳转
+AI Agent 开发学习知识体系，涵盖 8 个模块、16 篇文档。
 
-## License
-
-MIT
+| 模块 | 核心内容 |
+|------|---------|
+| 基础概念 | AI Agent 概念、LLM 基础、Prompt Engineering |
+| 框架与工具 | LangChain、LlamaIndex、AutoGen/CrewAI |
+| RAG检索增强生成 | RAG 原理与架构、向量数据库、优化策略 |
+| Agent设计模式 | ReAct、Plan-and-Execute、Multi-Agent 协作 |
+| Function Calling | 原理与实践、自定义工具、MCP 协议 |
+| 记忆与状态管理 | 短期/长期记忆、状态持久化 |
+| 应用实战 | 知识库问答、代码助手、数据分析 Agent |
+| 部署与优化 | 部署架构、性能优化、成本控制、监控 |
