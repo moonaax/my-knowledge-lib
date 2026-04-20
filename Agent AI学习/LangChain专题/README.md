@@ -43,7 +43,7 @@
 
 ## 前置知识
 
-- [[../基础概念/LLM大语言模型基础|LLM 大语言模型基础]]
-- [[../基础概念/Prompt Engineering|Prompt Engineering]]
-- [[../基础概念/什么是AI Agent|什么是 AI Agent]]
-- [[../框架与工具/LangChain框架详解|LangChain 框架详解]]（概览）
+- [[../基础概念/2-LLM大语言模型基础|LLM 大语言模型基础]]
+- [[../基础概念/3-Prompt Engineering|Prompt Engineering]]
+- [[../基础概念/1-什么是AI Agent|什么是 AI Agent]]
+- [[../框架与工具/1-LangChain框架详解|LangChain 框架详解]]（概览）

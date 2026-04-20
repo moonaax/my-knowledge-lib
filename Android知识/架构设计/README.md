@@ -1,5 +1,5 @@
 # 架构设计
-- [[MVC-MVP-MVVM-MVI|MVC / MVP / MVVM / MVI]]
-- [[Clean-Architecture|Clean Architecture]]
-- [[依赖注入|依赖注入（Hilt / Dagger / Koin）]]
-- [[响应式架构|响应式架构（Flow / RxJava）]]
+- [[1-MVC-MVP-MVVM-MVI|MVC / MVP / MVVM / MVI]]
+- [[2-Clean-Architecture|Clean Architecture]]
+- [[3-依赖注入|依赖注入（Hilt / Dagger / Koin）]]
+- [[4-响应式架构|响应式架构（Flow / RxJava）]]
