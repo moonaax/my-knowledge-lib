@@ -194,7 +194,7 @@ class CostTracker(BaseCallbackHandler):
         output_tokens = usage.get("completion_tokens", 0)
         
         self.total_tokens += input_tokens + output_tokens
-        # GPT-4o 价格
+        # GPT-5.4 价格
         self.total_cost += (input_tokens * 2.5 + output_tokens * 10) / 1_000_000
         
         print(f"累计: {self.total_tokens} tokens, ${self.total_cost:.4f}")

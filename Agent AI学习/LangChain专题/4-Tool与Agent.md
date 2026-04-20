@@ -817,7 +817,7 @@ def web_search(query: str) -> str:
     mock_results = {
         "python": "Python 3.12 发布于 2024 年，新增类型参数语法和性能改进。",
         "langchain": "LangChain 是最流行的 LLM 应用框架，支持 Agent、RAG 等模式。",
-        "ai": "2024 年 AI 领域重大进展包括 GPT-4o、Claude 3.5、Gemini 等。",
+        "ai": "2026 年 AI 领域重大进展包括 GPT-5.4、Claude Opus 4.6、Gemini 3.1 Pro、Llama 4 等。",
     }
     for key, value in mock_results.items():
         if key in query.lower():
@@ -984,7 +984,7 @@ async def run_tools_parallel(tools_with_inputs):
 # 3. 选择合适的模型
 # - 简单任务：gpt-4o-mini（快、便宜）
 # - 复杂推理：gpt-4o（准确）
-# - 超长上下文：claude-3.5-sonnet
+# - 超长上下文：claude-sonnet-4.6
 
 # 4. 工具返回值精简
 @tool
