@@ -31,15 +31,15 @@
 └── 性能优化与降级 — 缓存、并发、fallback
 ```
 
-## 文档列表
+## 文档列表（按学习顺序）
 
-- [[学习路线与资源导航]] — 完整学习路线、官方资源、推荐项目
-- [[Model IO 详解]] — ChatModel、Prompt Template、Output Parser
-- [[LCEL 表达式语言]] — 管道编排、RunnableParallel、RunnableBranch
-- [[Tool 与 Agent]] — 工具定义、Agent 构建、调试技巧
-- [[RAG 实战]] — 基于 LangChain 的完整 RAG 实现
-- [[LangGraph 编排]] — 有状态 Agent、循环、多 Agent 协作
-- [[生产化部署]] — LangServe、LangSmith、性能优化
+1. [[1-学习路线与资源导航]] — 全景概览、学习路线、官方资源、推荐项目（先读这篇建立全局认知）
+2. [[2-Model IO详解]] — ChatModel、Prompt Template、Output Parser
+3. [[3-LCEL表达式语言]] — 管道编排、RunnableParallel、RunnableBranch
+4. [[4-Tool与Agent]] — 工具定义、Agent 构建、调试技巧
+5. [[5-RAG实战]] — 基于 LangChain 的完整 RAG 实现
+6. [[6-LangGraph编排]] — 有状态 Agent、循环、多 Agent 协作
+7. [[7-生产化部署]] — LangServe、LangSmith、性能优化
 
 ## 前置知识
 
