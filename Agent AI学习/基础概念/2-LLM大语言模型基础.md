@@ -37,45 +37,54 @@ Attention(Q, K, V) = softmax(QK^T / √d_k) × V
 
 ### 2.3 关键参数
 
-| 参数 | 含义 | 影响 |
-|------|------|------|
-| Temperature | 输出随机性 | 0=确定性，1=创造性 |
-| Top-p | 核采样阈值 | 控制候选词范围 |
-| Max Tokens | 最大输出长度 | 控制回复长度 |
-| Context Window | 上下文窗口 | 单次能处理的总 Token 数 |
-| Stop Sequences | 停止标记 | 控制生成何时结束 |
+| 参数             | 含义     | 影响              |
+| -------------- | ------ | --------------- |
+| Temperature    | 输出随机性  | 0=确定性，1=创造性     |
+| Top-p          | 核采样阈值  | 控制候选词范围         |
+| Max Tokens     | 最大输出长度 | 控制回复长度          |
+| Context Window | 上下文窗口  | 单次能处理的总 Token 数 |
+| Stop Sequences | 停止标记   | 控制生成何时结束        |
 
 ## 3. 主流模型对比
 
-### 3.1 闭源模型
+### 3.1 闭源模型（2026 年 4 月）
 
-| 模型 | 厂商 | 上下文窗口 | 特点 |
-|------|------|-----------|------|
-| GPT-4o | OpenAI | 128K | 综合能力强，多模态 |
-| Claude 3.5 Sonnet | Anthropic | 200K | 长文本理解优秀，代码能力强 |
-| Gemini 1.5 Pro | Google | 1M | 超长上下文，多模态 |
-| 文心一言 4.0 | 百度 | 128K | 中文理解优秀 |
-| 通义千问 Max | 阿里 | 128K | 中文生态完善 |
+| 模型 | 厂商 | 上下文窗口 | API 价格（输入/百万 Token） | 特点 |
+|------|------|-----------|------------------------|------|
+| GPT-5.4 Pro | OpenAI | 128K | $2.50 | 综合能力顶级，与 Gemini 3.1 Pro 并列榜首 |
+| Claude Opus 4.6 | Anthropic | 200K | $5.00 | 代码能力最强（SWE-bench 领先），深度推理 |
+| Claude Sonnet 4.6 | Anthropic | 1M（beta） | $3.00 | 实际工作效率最高，GitHub Copilot 默认模型 |
+| Gemini 3.1 Pro | Google | 1M | $2.00 | 13/16 基准测试领先，性价比最高的旗舰模型 |
+| Grok 4.20 | xAI | 128K | 未公开 | 四 Agent 并行架构，实时 X 数据，金融交易唯一盈利模型 |
+| 通义千问 Max | 阿里 | 128K | ¥0.02 | 中文生态完善 |
+| 文心一言 4.0 | 百度 | 128K | ¥0.02 | 中文理解优秀 |
 
-### 3.2 开源模型
+> 💡 GPT-5.5（代号 Spud）已完成预训练，预计 Q2 发布。Claude Mythos 因网络安全风险不会公开发布。
 
-| 模型 | 参数量 | 特点 | 适用场景 |
-|------|--------|------|---------|
-| Llama 3 | 8B/70B | Meta 出品，社区活跃 | 通用场景 |
-| Qwen 2.5 | 7B/72B | 阿里出品，中文优秀 | 中文场景 |
-| Mistral | 7B/8x7B | 高效 MoE 架构 | 资源受限场景 |
-| DeepSeek V2 | 236B(MoE) | 性价比极高 | 代码/推理 |
-| Yi | 6B/34B | 零一万物，中英双语 | 双语场景 |
+### 3.2 开源模型（2026 年 4 月）
 
-### 3.3 选型建议
+| 模型 | 参数量 | 上下文窗口 | 许可证 | 特点 |
+|------|--------|-----------|--------|------|
+| Gemma 4 | 多尺寸 | 256K | Apache 2.0 | Google 出品，前沿级性能，可跑在手机上，完全开源 |
+| Llama 4 Maverick | 400B (128 experts) | 10M | Meta 许可 | 最长上下文窗口，需要大量 GPU |
+| Llama 4 Scout | 109B (16 experts) | 1M | Meta 许可 | Maverick 的轻量版，更易部署 |
+| DeepSeek V3.2 | MoE | 128K | 开源 | $0.27/百万 Token，性价比炸裂 |
+| Qwen 3.6 Plus | MoE | 1M | 开源 | 阿里最新，强 Agent 能力，中文最优 |
+| MiniMax M2.7 | - | - | 开源 | "自进化"训练，编码接近 Claude Opus 水平 |
+
+> 💡 2026 年开源模型已不再是"妥协之选"——Gemma 4 和 Llama 4 在多项基准上与闭源模型持平。
+
+### 3.3 选型建议（2026 年 4 月）
 
 ```
-需要最强能力 → GPT-4o / Claude 3.5 Sonnet
-需要长上下文 → Gemini 1.5 Pro / Claude
-需要本地部署 → Llama 3 / Qwen 2.5
-需要中文优化 → Qwen / 文心一言
-需要代码能力 → DeepSeek Coder / Claude
-预算有限     → DeepSeek / Mistral
+综合能力最强   → Gemini 3.1 Pro（性价比最高）/ GPT-5.4 Pro
+代码/编程     → Claude Sonnet 4.6（GitHub Copilot 默认）/ Claude Opus 4.6
+超长上下文    → Llama 4 Maverick（10M）/ Gemini 3.1 Pro（1M）
+本地部署      → Gemma 4（Apache 2.0，多尺寸）/ Qwen 3.6 Plus
+中文优化      → Qwen 3.6 Plus / 通义千问 Max
+预算有限      → DeepSeek V3.2（$0.27/M tokens，比 Claude 便宜 18 倍）
+实时数据      → Grok 4.20（接入 X 实时数据）
+隐私优先      → Gemma 4（Apache 2.0，无限制）
 ```
 
 ## 4. Token 与计费
@@ -289,7 +298,7 @@ response = client.chat.completions.create(
 **答：** Temperature 控制输出随机性，0 表示确定性输出，1 表示高创造性。Agent 场景下推荐设为 0 或接近 0，因为工具调用和推理需要确定性和一致性，避免随机性导致参数生成错误。
 
 ### Q3: 开源模型和闭源模型各有什么优劣？什么场景选哪种？
-**答：** 闭源模型（GPT-4o、Claude）能力强但有数据隐私风险和 API 依赖；开源模型（Llama、Qwen）可本地部署、数据可控但能力稍弱。涉及敏感数据或需要离线运行选开源，追求最强能力和快速上线选闭源。
+**答：** 闭源模型（GPT-5.4、Claude Opus 4.6、Gemini 3.1 Pro）能力最强但有数据隐私风险和 API 依赖；开源模型（Gemma 4、Llama 4、Qwen 3.6、DeepSeek V3.2）可本地部署、数据可控，且 2026 年已在多项基准上与闭源模型持平。涉及敏感数据或需要离线运行选开源（推荐 Gemma 4，Apache 2.0 无限制），追求最强能力和快速上线选闭源，预算有限选 DeepSeek V3.2（$0.27/M tokens）。
 
 ### Q4: Token 是什么？中英文的 Token 计算有什么区别？
 **答：** Token 是 LLM 处理文本的基本单位，不等于字符或单词。英文约 1 token ≈ 4 字符 ≈ 0.75 个单词；中文约 1 token ≈ 1-2 个汉字。理解 Token 对成本估算和上下文窗口管理至关重要。
@@ -298,7 +307,7 @@ response = client.chat.completions.create(
 **答：** Embedding 模型将文本转为高维向量，语义相近的文本在向量空间中距离更近。通常用余弦相似度计算两个向量的相似程度，值越接近 1 表示语义越相似。这是 RAG 语义检索的基础。
 
 ### Q6: 如何在本地部署一个开源 LLM？有哪些方案？
-**答：** 最简单的方案是使用 Ollama，一行命令即可运行（ollama run llama3:8b）。它提供兼容 OpenAI 格式的 API，Python 代码只需改 base_url 即可切换。其他方案还有 vLLM（高性能推理）、llama.cpp（CPU 推理）等。
+**答：** 最简单的方案是使用 Ollama，一行命令即可运行（ollama run llama4-scout）。它提供兼容 OpenAI 格式的 API，Python 代码只需改 base_url 即可切换。其他方案还有 vLLM（高性能推理）、llama.cpp（CPU 推理）等。2026 年推荐 Gemma 4（Apache 2.0，多尺寸可选，手机都能跑）或 Qwen 3.6 Plus（中文最优）。
 
 ### Q7: 什么是模型幻觉（Hallucination）？在 Agent 系统中如何缓解？
 **答：** 幻觉是模型生成看似合理但不真实的内容。在 Agent 中可通过 RAG（基于检索的事实回答）、工具调用（用搜索引擎验证）、自我反思机制（让模型检查自己的输出）来缓解。
