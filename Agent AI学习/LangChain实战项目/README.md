@@ -6,7 +6,7 @@
 
 | # | 项目 | 状态 | 说明 |
 |---|------|------|------|
-| 1 | [[1-DeepSeek多轮对话客户端]] | ✅ 已完成 | 基础对话，LangChain 入门 |
+| 1 | [[1-DeepSeek多轮对话客户端]] | ✅ 已完成 | 终端版 + Electron 桌面客户端（深浅主题） |
 | 2 | 添加工具调用（Agent） | 🔲 待开始 | @tool、AgentExecutor |
 | 3 | 知识库 RAG 问答 | 🔲 待开始 | 基于本知识库的 RAG 系统 |
 | 4 | LangGraph 多步骤 Agent | 🔲 待开始 | StateGraph、循环、自纠错 |
