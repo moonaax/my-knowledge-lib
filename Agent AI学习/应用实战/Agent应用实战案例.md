@@ -1,6 +1,10 @@
 # Agent 应用实战案例
 
+> **本文定位：** 前面的模块讲了各种概念和框架，本文把它们组合起来做完整的项目。每个案例都是可以直接跑的代码，覆盖了知识库问答、代码助手、数据分析、API 服务四个最常见的 Agent 应用场景。
+
 ## 案例一：知识库问答 Agent
+
+> **这是最经典的 Agent 应用：** 基于企业内部文档构建智能问答系统。核心是 RAG（检索增强生成）——先从文档中检索相关内容，再让 LLM 基于检索结果回答问题，避免幻觉。
 
 ### 需求
 
@@ -11,6 +15,8 @@
 - 多轮对话
 
 ### 完整实现
+
+> **整体架构：** 文档加载 → 分块 → Embedding 向量化 → 存入 ChromaDB → 用户提问时语义检索 Top-K → 检索结果 + 问题一起传给 LLM → 生成带来源引用的回答。同时维护对话历史支持多轮对话。
 
 ````python
 """企业知识库问答 Agent"""
@@ -116,13 +122,25 @@ agent = KnowledgeBaseAgent("./company_docs")
 print(agent.chat("我们的 API 认证方式是什么?"))
 print(agent.chat("具体怎么获取 Token?"))  # 能关联上下文
 ````
+
+> **关键代码解读：**
+> - `search_type="mmr"` — 最大边际相关性检索，在相关性和多样性之间取平衡，避免检索到的文档内容重复
+> - `RecursiveCharacterTextSplitter` — 按层级分隔符（标题 → 段落 → 句子）递归分块，比简单按字符数切割更智能
+> - `_build_chain()` 用 LCEL 管道组装：检索器获取文档 → 格式化 → 拼入 prompt → LLM 生成 → 解析输出
+> - `chat_history` 限制在 20 条以内，防止 Token 溢出
+> - `_format_docs()` 在每段文档前标注来源，让 LLM 能在回答中引用出处
+
 ## 案例二：代码助手 Agent
+
+> **和案例一的区别：** 案例一是 RAG 模式（检索+生成），案例二是 Agent 模式（自主决策+工具调用）。Agent 会根据用户问题自主决定：先看项目结构 → 读取相关文件 → 搜索代码 → 运行命令 → 给出分析结果。
 
 ### 需求
 
 一个能读取项目代码、分析问题、生成修复方案的 Agent。
 
 ### 实现
+
+> **工具设计是核心：** 这个 Agent 有 4 个工具——读文件、列目录、搜索代码、执行命令。每个工具的 docstring 描述了用途，LLM 靠这些描述决定何时调用哪个工具。注意 `run_command` 有安全检查，禁止危险命令。
 
 ````python
 """代码助手 Agent"""
@@ -221,7 +239,17 @@ result = executor.invoke({
 })
 print(result["output"])
 ````
+
+> **关键代码解读：**
+> - `@tool` 装饰器 — 把普通函数变成 Agent 可调用的工具，docstring 作为工具描述
+> - `dangerous` 列表 — 安全白名单机制，禁止 rm、sudo 等危险命令
+> - `max_iterations=10` — 限制 Agent 最多执行 10 步，防止无限循环
+> - `agent_scratchpad` — Agent 的"草稿纸"，存放中间思考过程和工具调用结果
+> - 文件内容超过 5000 字符会截断，防止单次工具调用消耗过多 Token
+
 ## 案例三：数据分析 Agent
+
+> **自然语言驱动的数据分析：** 用户用中文描述需求（如"分析各产品销售表现"），Agent 自动完成数据查询 → 编写 pandas 分析代码 → 执行 → 生成图表 → 用通俗语言解释结论。核心是 `analyze_data` 工具，它接收 Agent 生成的 Python 代码并执行。
 
 ### 需求
 
@@ -299,7 +327,16 @@ result = executor.invoke({
 })
 print(result["output"])
 ````
+
+> **关键代码解读：**
+> - `analyze_data` 工具用 `exec()` 执行 Agent 生成的 pandas 代码，结果通过 `result` 变量返回
+> - `local_vars = {"df": SAMPLE_DATA, "pd": pd}` — 预注入数据和库，Agent 生成的代码可以直接用 `df` 和 `pd`
+> - 生产环境中 `exec()` 有安全风险，应该用沙箱（如 Docker 容器）隔离执行
+> - `create_chart` 这里是模拟的，实际项目中可以用 matplotlib/plotly 生成真实图表
+
 ## 案例四：Web API Agent 服务
+
+> **把 Agent 变成 API 服务：** 前面的案例都是本地运行的，实际项目中需要部署为 HTTP API 供前端/其他服务调用。用 FastAPI 包装 Agent，通过 session_id 实现多用户会话隔离。
 
 ### 使用 FastAPI 部署 Agent
 
@@ -344,6 +381,13 @@ async def clear_session(session_id: str):
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
 ````
+
+> **关键代码解读：**
+> - `sessions` 字典 — 按 session_id 隔离不同用户的 Agent 实例，每个用户有独立的对话历史
+> - `ChatRequest/ChatResponse` — Pydantic 模型定义请求和响应格式，FastAPI 自动做参数校验
+> - `DELETE /session/{session_id}` — 清除会话，释放内存
+> - 生产环境中 sessions 应该用 Redis 存储（而非内存字典），并设置过期时间自动清理
+
 ## 5. 项目结构模板
 
 ````

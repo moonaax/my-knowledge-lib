@@ -1,5 +1,7 @@
 # Function Calling 原理与实践
 
+
+> **本文定位：** Function Calling 是 Agent 使用工具的基础能力。本文从 OpenAI 原生 API 讲起，到 LangChain 工具封装，再到 MCP 协议标准化，覆盖了工具调用的完整知识链。
 ## 1. 什么是 Function Calling
 
 Function Calling 是 LLM 根据用户意图，自动决定调用哪个函数、传什么参数的能力。它是 Agent 使用工具的基础。
@@ -23,6 +25,8 @@ FC 方式:  用户 → LLM 自动识别意图和参数 → 调用函数
 
 ### 2.1 基础用法
 
+
+> **思路：** 用 OpenAI 原生 API 演示 Function Calling 的基础用法。核心是定义 tools 列表（JSON Schema 格式），告诉 LLM 有哪些函数可用、每个函数的参数是什么。
 ````python
 from openai import OpenAI
 
@@ -70,9 +74,18 @@ if message.tool_calls:
         print(f"函数: {tool_call.function.name}")
         print(f"参数: {tool_call.function.arguments}")
         # 输出: 函数: get_weather, 参数: {"city": "北京"}
+
+> **关键代码解读：**
+> - `tools` 列表定义了可用函数的 Schema：名称、描述、参数类型和约束
+> - `tool_choice="auto"` — 让 LLM 自动决定是否需要调用函数
+> - `message.tool_calls` — 如果 LLM 决定调用函数，这里会包含函数名和参数 JSON
+> - `parameters.required` — 指定哪些参数是必填的，LLM 必须提供
+> - `enum` — 约束参数取值范围，避免 LLM 生成无效值
 ````
 ### 2.2 完整调用流程
 
+
+> **思路：** 完整的 Function Calling 至少需要两次 LLM 调用——第一次让 LLM 决定调用什么函数，第二次把函数结果传回让 LLM 生成最终回答。中间由开发者执行实际的函数调用。
 ````python
 import json
 
@@ -123,6 +136,13 @@ def run_conversation(user_message: str):
     return final_response.choices[0].message.content
 
 print(run_conversation("北京和上海今天哪个更热?"))
+
+> **关键代码解读：**
+> - 第一次 LLM 调用：分析用户意图，决定是否需要调用函数，输出函数名和参数
+> - `messages.append(message)` — 把 LLM 的决策（包含 tool_calls）加入消息历史
+> - 执行实际函数，结果以 `role: "tool"` 的消息格式加入历史
+> - 第二次 LLM 调用：基于函数执行结果生成最终的自然语言回答
+> - `tool_call_id` — 每个工具调用有唯一 ID，用于匹配调用和结果
 ````
 ### 2.3 并行函数调用
 
@@ -150,6 +170,8 @@ tool_choice="required"
 # 指定调用某个函数
 tool_choice={"type": "function", "function": {"name": "get_weather"}}
 ````
+
+> **函数定义的质量直接决定 Function Calling 的效果：** LLM 完全靠 description 来理解函数用途和使用时机。描述不精确会导致该调用时不调用、不该调用时误调用。
 ## 3. 函数定义最佳实践
 
 ### 3.1 描述要精确
@@ -190,6 +212,8 @@ tool_choice={"type": "function", "function": {"name": "get_weather"}}
 ````
 ### 3.3 错误处理
 
+
+> **为什么需要错误处理：** LLM 生成的参数可能不合法（类型错误、值越界），工具本身也可能超时或异常。好的错误处理让 Agent 能优雅地处理失败并重试。
 ````python
 def safe_tool_call(func, **kwargs):
     """安全的工具调用包装"""
@@ -202,11 +226,17 @@ def safe_tool_call(func, **kwargs):
         return {"status": "error", "message": "调用超时，请稍后重试"}
     except Exception as e:
         return {"status": "error", "message": f"未知错误: {e}"}
+
+> **关键代码解读：** `safe_tool_call` 是一个通用的工具调用包装器，捕获各种异常并返回结构化的错误信息。LLM 收到错误信息后可以调整参数重试，而不是直接崩溃。
 ````
+
+> **从原生 API 到框架封装：** 前面用的是 OpenAI 原生 API，实际项目中通常用 LangChain 等框架封装，代码更简洁、支持多模型切换。
 ## 4. 自定义工具开发
 
 ### 4.1 LangChain 工具
 
+
+> **LangChain 的工具封装：** `@tool` 装饰器 + Pydantic `args_schema` 是最常用的方式。Pydantic 模型定义参数结构和描述，LangChain 自动生成 Function Calling 所需的 JSON Schema。
 ````python
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
@@ -232,6 +262,8 @@ async def fetch_url(url: str) -> str:
         async with session.get(url) as response:
             return await response.text()
 ````
+
+> **工具组合模式：** 把多个相关工具封装成一个 Toolkit 类，共享配置和连接。比如数据库工具包包含 query_db 和 list_tables，共享同一个数据库连接。
 ### 4.3 工具组合
 
 ````python
@@ -252,7 +284,14 @@ class DatabaseToolkit:
     
     def get_tools(self):
         return [self.query_db, self.list_tables]
+
+> **关键代码解读（工具组合）：**
+> - `DatabaseToolkit` 把多个相关工具封装成一个工具包
+> - `get_tools()` 返回工具列表，可以直接传给 Agent
+> - 这种模式适合一组相关工具共享状态（如数据库连接）的场景
 ````
+
+> **MCP 是工具标准化的未来方向：** 目前每个框架（LangChain、LlamaIndex、AutoGen）都有自己的工具定义格式，MCP 试图统一这些格式，让工具"一次开发，到处使用"。
 ## 5. MCP（Model Context Protocol）
 
 ### 5.1 什么是 MCP
@@ -278,6 +317,8 @@ MCP 方式: 统一的协议，工具一次开发，到处使用
 ````
 ### 5.3 MCP Server 开发
 
+
+> **思路：** 开发一个 MCP Server 只需定义两个处理器：`list_tools`（声明有哪些工具）和 `call_tool`（处理工具调用）。Server 通过标准输入输出与 MCP Host 通信。
 ````python
 from mcp.server import Server
 from mcp.types import Tool, TextContent
@@ -311,7 +352,15 @@ if __name__ == "__main__":
     import asyncio
     from mcp.server.stdio import stdio_server
     asyncio.run(stdio_server(server))
+
+> **关键代码解读：**
+> - `@server.list_tools()` — 声明 MCP Server 提供哪些工具，返回工具列表
+> - `@server.call_tool()` — 处理工具调用请求，根据 name 分发到对应的处理函数
+> - `inputSchema` — 用 JSON Schema 定义参数格式，和 OpenAI 的 Function Calling 格式类似
+> - `stdio_server` — 通过标准输入输出通信，MCP Host 通过管道与 Server 交互
 ````
+
+> **安全是工具调用的底线：** LLM 生成的参数不可信（可能被 Prompt 注入），所有工具都必须做输入验证。代码执行类工具必须沙箱隔离，敏感操作（删除、修改）需要人工确认。
 ## 6. 安全考虑
 
 ````

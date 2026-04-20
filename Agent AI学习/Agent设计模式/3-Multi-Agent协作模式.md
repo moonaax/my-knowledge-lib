@@ -1,5 +1,7 @@
 # Multi-Agent 协作模式
 
+
+> **本文定位：** 单个 Agent 能力有限，多个 Agent 协作可以实现更复杂的任务。本文介绍 5 种协作模式、3 种通信机制，以及设计多 Agent 系统的实践原则。
 ## 1. 为什么需要多 Agent
 
 单个 Agent 的局限性：
@@ -12,6 +14,8 @@
 - 互相检查，提高输出质量
 - 并行处理，提升效率
 
+
+> **本节介绍 5 种协作模式：** 顺序流水线（最简单）、主管模式（最灵活）、辩论模式（多角度分析）、层级模式（大型项目）、投票模式（高可靠性）。根据任务特点选择合适的模式。
 ## 2. 协作模式
 
 ### 2.1 顺序流水线（Sequential Pipeline）
@@ -22,6 +26,8 @@ Agent A → Agent B → Agent C → 最终输出
 适用: 任务有明确的先后顺序
 示例: 需求分析 → 代码编写 → 代码审查
 ````
+
+> **思路：** 最简单的多 Agent 模式——像工厂流水线一样，A 做完传给 B，B 做完传给 C。每个 Agent 专注一个环节。
 ````python
 from langgraph.graph import StateGraph, END
 
@@ -53,6 +59,12 @@ graph.add_edge("coder", "reviewer")
 graph.add_edge("reviewer", END)
 
 app = graph.compile()
+
+> **关键代码解读（流水线模式）：**
+> - 三个节点 analyst → coder → reviewer，固定顺序执行
+> - 每个节点是一个函数，接收 State、返回更新后的字段
+> - `set_entry_point` 设置入口，`add_edge` 定义固定的执行顺序
+> - 最简单的多 Agent 模式，适合有明确先后关系的任务
 ````
 ### 2.2 主管模式（Supervisor）
 
@@ -64,6 +76,8 @@ app = graph.compile()
 主管负责: 任务分配、进度协调、结果汇总
 Worker 负责: 执行具体子任务
 ````
+
+> **思路：** 一个 Supervisor Agent 作为"主管"，动态决定每一步由哪个 Worker 执行。比流水线更灵活——主管可以根据中间结果调整分工，甚至让同一个 Worker 执行多次。
 ````python
 from langgraph.graph import StateGraph, END
 
@@ -125,6 +139,12 @@ for worker in ["researcher", "coder", "reviewer"]:
     graph.add_edge(worker, "supervisor")
 
 app = graph.compile()
+
+> **关键代码解读（Supervisor 模式）：**
+> - `supervisor` 节点根据当前进展动态决定下一个执行者，返回 Agent 名字或 "FINISH"
+> - `route` 函数根据 supervisor 的决策路由到对应的 worker 节点
+> - 每个 worker 完成后都回到 supervisor，由 supervisor 决定下一步
+> - `speaker_selection_method` 类似 AutoGen 的 GroupChat，但 LangGraph 版本更可控
 ````
 ### 2.3 辩论模式（Debate）
 
@@ -133,6 +153,8 @@ Agent A (正方) ⟷ Agent B (反方) → Judge (裁判) → 结论
 
 适用: 需要多角度分析的决策问题
 ````
+
+> **思路：** 正反两方 Agent 交替辩论，最后由裁判 Agent 综合双方观点给出客观结论。适合需要多角度分析的决策问题。
 ````python
 def debate(topic: str, rounds: int = 3) -> str:
     pro_messages = []
@@ -165,6 +187,12 @@ def debate(topic: str, rounds: int = 3) -> str:
     """)
     
     return judge_response.content
+
+> **关键代码解读（辩论模式）：**
+> - 正反方各自能看到对方之前的论点，形成真正的"辩论"
+> - 多轮辩论让论证越来越深入
+> - 裁判 Agent 综合双方观点给出客观结论
+> - 适合技术选型、方案评估等需要多角度分析的决策
 ````
 ### 2.4 层级模式（Hierarchical）
 
@@ -179,6 +207,8 @@ Dev1  Dev2    Designer
 ````
 ### 2.5 投票/共识模式
 
+
+> **思路：** 多个 Agent 独立回答同一问题，然后汇总找共识。类似于"三个臭皮匠赛过诸葛亮"——多个独立意见的共识比单一意见更可靠。
 ````python
 def consensus_agent(question: str, n_agents: int = 3) -> str:
     """多个 Agent 独立回答，取共识"""
@@ -198,7 +228,14 @@ def consensus_agent(question: str, n_agents: int = 3) -> str:
     请找出共识点和分歧点，给出最终综合答案。
     """)
     return consensus.content
+
+> **关键代码解读（投票模式）：**
+> - `temperature=0.8` — 增加随机性，让每个 Agent 给出不同的答案
+> - 多个 Agent 独立回答同一问题，最后由汇总 Agent 找出共识点和分歧点
+> - 适合需要高可靠性的场景——多数一致的答案更可信
 ````
+
+> **通信机制决定了 Agent 之间如何交换信息：** 共享状态最简单（LangGraph 默认方式），消息传递适合松耦合，黑板模式适合 Agent 自主决定何时行动。
 ## 3. 通信机制
 
 ### 3.1 共享状态
@@ -241,7 +278,15 @@ def agent_loop(agent, blackboard):
             blackboard.update(result)
         if is_complete(blackboard):
             break
+
+> **关键代码解读（黑板模式）：**
+> - `blackboard` 是一个共享字典，所有 Agent 都可以读写
+> - 每个 Agent 自主检查黑板状态，决定是否需要行动（`should_act`）
+> - 行动结果写回黑板，其他 Agent 可以看到
+> - 适合 Agent 之间松耦合、自主协作的场景
 ````
+
+> **本节是方法论：** 不管用哪个框架（LangGraph/AutoGen/CrewAI），这些设计原则都适用。多 Agent 系统最常见的问题不是技术实现，而是角色设计不合理、协作流程不清晰。
 ## 4. 设计原则
 
 ### 4.1 Agent 数量
@@ -269,6 +314,8 @@ Agent 越多:
 □ 与其他 Agent 的交互协议
 □ 失败时的处理策略
 ````
+
+> **多 Agent 系统的"坑"比单 Agent 多得多：** 无限对话、角色混乱、成本失控都是高频问题。下面的解决方案都是实践中总结的经验。
 ### 4.3 防止常见问题
 
 | 问题 | 解决方案 |

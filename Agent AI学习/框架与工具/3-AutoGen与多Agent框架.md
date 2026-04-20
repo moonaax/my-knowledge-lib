@@ -31,6 +31,8 @@ pip install autogen-agentchat autogen-ext[openai]
 ````
 ### 2.3 双 Agent 对话
 
+> **这是 AutoGen 最基础的模式：** 两个 Agent 对话——AssistantAgent（AI 助手）负责思考和生成代码，UserProxyAgent（用户代理）负责自动执行代码并把结果反馈给 Assistant。这形成了一个"生成→执行→反馈→改进"的自动闭环，不需要人工介入。
+
 ````python
 from autogen import AssistantAgent, UserProxyAgent
 
@@ -55,7 +57,16 @@ user_proxy.initiate_chat(
     message="写一个 Python 脚本，分析 CSV 文件中的销售数据并生成图表"
 )
 ````
-### 2.4 Group Chat — 多 Agent 协作
+
+> **关键代码解读：**
+> - `human_input_mode="NEVER"` — 完全自动化，不暂停等待人工输入。也可以设为 `"ALWAYS"`（每轮都问人）或 `"TERMINATE"`（结束时问人）
+> - `code_execution_config` — 允许 UserProxy 自动执行 Assistant 生成的代码，`work_dir` 指定工作目录
+> - `max_consecutive_auto_reply=5` — 最多自动回复 5 轮，防止无限对话
+> - `initiate_chat()` — 发起对话，UserProxy 把任务描述发给 Assistant，然后两者自动来回对话直到任务完成
+
+### 2.4 Group Chat
+
+> **从双人对话到群聊：** 双 Agent 只能处理简单任务。复杂任务需要多个角色协作——项目经理拆解任务、开发写代码、审查员 Review。GroupChat 让多个 Agent 在一个"群聊"中协作，由 `GroupChatManager` 自动决定每轮谁来发言。 — 多 Agent 协作
 
 ````python
 from autogen import GroupChat, GroupChatManager
@@ -95,7 +106,16 @@ user_proxy.initiate_chat(
     message="开发一个 REST API，包含用户注册、登录和个人信息管理功能"
 )
 ````
+
+> **关键代码解读：**
+> - 每个 Agent 的 `system_message` 要明确职责和发言条件（如"只在有代码需要审查时发言"），否则会出现抢话、角色混乱
+> - `max_round=15` — 群聊最多 15 轮，防止无限对话导致成本失控
+> - `speaker_selection_method="auto"` — 让 LLM 根据对话上下文自动选择下一个发言者，也可以设为 `"round_robin"`（轮流）或自定义函数
+> - `GroupChatManager` — 群聊的"主持人"，负责协调发言顺序和终止条件
+
 ## 3. CrewAI
+
+> **CrewAI vs AutoGen：** AutoGen 是"对话驱动"——Agent 之间通过自由对话协作，灵活但不太可控。CrewAI 是"任务驱动"——先定义好角色（Agent）、任务（Task）、流程（Process），然后按流程执行，更结构化、更可预测。
 
 ### 3.1 核心概念
 
@@ -113,6 +133,8 @@ Tool   → Agent 可使用的工具
 pip install crewai crewai-tools
 ````
 ### 3.3 基础示例
+
+> **CrewAI 的三要素：** Agent（谁来做）、Task（做什么）、Crew（怎么协作）。每个 Agent 有明确的角色和目标，每个 Task 有明确的描述和期望输出，Crew 把它们组合起来按指定流程执行。
 
 ````python
 from crewai import Agent, Task, Crew, Process
@@ -160,7 +182,18 @@ crew = Crew(
 result = crew.kickoff()
 print(result)
 ````
+
+> **关键代码解读：**
+> - `Agent` 的 `role`、`goal`、`backstory` 三个字段共同定义了 Agent 的"人设"，LLM 会据此来扮演角色
+> - `Task` 的 `context=[research_task]` — 任务依赖关系，writing_task 能获取 research_task 的输出作为输入
+> - `Process.sequential` — 顺序执行，先调研再写作。也支持 `Process.hierarchical`（层级模式，由 Manager Agent 分配任务）
+> - `crew.kickoff()` — 启动执行，按流程依次完成所有任务
+>
+> **对比 AutoGen：** AutoGen 的 Agent 通过自由对话协作，过程不太可控。CrewAI 的任务和流程是预定义的，执行过程更可预测，适合业务流程自动化。
+
 ### 3.4 自定义工具
+
+> **给 Agent 配备工具：** 和 LangChain 类似，CrewAI 的 Agent 也可以使用工具。`@tool` 装饰器把函数变成工具，通过 `tools=[...]` 分配给 Agent。Agent 在执行任务时会自主决定是否需要调用工具。
 
 ````python
 from crewai.tools import tool
@@ -180,6 +213,8 @@ researcher = Agent(
 )
 ````
 ## 4. MetaGPT — 软件公司模拟
+
+> **MetaGPT 的独特之处：** 其他框架是通用的多 Agent 协作工具，MetaGPT 专门模拟软件公司的工作流程。每个角色有标准化的输入输出——产品经理输出 PRD 文档，架构师输出设计文档，工程师根据设计文档写代码，QA 写测试用例。这种"标准化交付物"的设计让协作更高效。
 
 MetaGPT 模拟一个软件公司的完整团队：
 
@@ -205,7 +240,16 @@ async def main():
     company.start_project("开发一个待办事项管理的 Web 应用")
     await company.run(n_round=5)
 ````
+
+> **关键代码解读：**
+> - `company.hire([...])` — 组建团队，每个角色是一个预定义的 Agent
+> - `Engineer(n_borg=3)` — 可以配置多个工程师并行开发
+> - `company.invest(investment=10.0)` — 设置 API 调用预算（美元），防止成本失控
+> - `company.run(n_round=5)` — 运行 5 轮迭代，每轮各角色按顺序交付自己的产出
+
 ## 5. 多 Agent 设计原则
+
+> **本节是方法论：** 前面介绍了具体框架，这里讲的是不管用哪个框架都适用的设计原则。多 Agent 系统最常见的问题不是技术实现，而是角色设计不合理、协作流程不清晰。
 
 ### 5.1 角色设计
 
@@ -221,6 +265,8 @@ async def main():
 ❌ 没有明确的协作流程
 ````
 ### 5.2 协作模式
+
+> **选择协作模式的关键：** 根据任务特点选择——有先后依赖用顺序模式，需要统一协调用层级模式，需要多角度分析用辩论模式，需要高可靠性用投票模式。实际项目中也可以混合使用。
 
 ````
 1. 顺序模式 (Sequential)
@@ -241,6 +287,8 @@ async def main():
 ````
 ### 5.3 常见陷阱
 
+> **多 Agent 系统的"坑"比单 Agent 多得多：** 多个 Agent 交互会产生组合爆炸的复杂性——无限对话、角色混乱、成本失控都是高频问题。下面这张表是实践中总结的经验。
+
 | 陷阱 | 解决方案 |
 |------|---------|
 | Agent 之间无限对话 | 设置 max_round 限制 |
@@ -249,6 +297,8 @@ async def main():
 | 结果不一致 | 加入 Review Agent 做质量把关 |
 
 ## 6. 框架选型建议
+
+> **选型核心原则：** 不要为了用多 Agent 而用多 Agent。先评估任务是否真的需要多个角色协作——如果一个 Agent + 几个工具就能搞定，就不要引入多 Agent 的复杂性。只有当任务确实需要不同视角、不同专长的角色协作时，才考虑多 Agent 框架。
 
 ````
 简单的双 Agent 对话     → AutoGen
