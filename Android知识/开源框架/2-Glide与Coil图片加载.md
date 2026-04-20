@@ -1,7 +1,7 @@
 # Glide 与 Coil 图片加载
 
 > 本文系统梳理 Android 两大主流图片加载框架 **Glide** 与 **Coil** 的核心原理、源码分析、高级用法及面试高频题。代码以 Java 为主，Coil 部分使用 Kotlin。
-> 相关笔记：[[内存优化]] · [[OkHttp与Retrofit]] · [[Bitmap与图片压缩]] · [[Android生命周期]]
+> 相关笔记：[[2-内存优化]] · [[1-OkHttp与Retrofit]] · [[Bitmap与图片压缩]] · [[Android生命周期]]
 
 ---
 
@@ -81,7 +81,7 @@ private RequestManager supportFragmentGet(Context context,
 }
 ```
 
-> ⚠️ 注意：如果传入 `ApplicationContext`，Glide 无法绑定生命周期，请求会跟随 App 进程存活，容易造成 [[内存优化|内存泄漏]]。
+> ⚠️ 注意：如果传入 `ApplicationContext`，Glide 无法绑定生命周期，请求会跟随 App 进程存活，容易造成 [[2-内存优化|内存泄漏]]。
 
 ### 1.3 Bitmap 复用池（BitmapPool）
 
@@ -119,7 +119,7 @@ Coil 的架构优势：
 |------|------|
 | **协程驱动** | 所有 I/O 操作在协程中执行，天然支持取消与结构化并发 |
 | **Lifecycle 感知** | 通过 `ViewTargetRequestDelegate` 绑定 `ViewTreeLifecycleOwner` |
-| **OkHttp 集成** | 默认使用 [[OkHttp与Retrofit|OkHttp]] 作为网络层 |
+| **OkHttp 集成** | 默认使用 [[1-OkHttp与Retrofit|OkHttp]] 作为网络层 |
 | **零反射** | 不使用注解处理器或反射，启动速度快 |
 | **轻量** | 约 1500 个方法数，远小于 Glide 的 ~8000 |
 
@@ -415,7 +415,7 @@ public class RequestManager implements ComponentCallbacks2,
 | **语言** | Java（支持 Kotlin 扩展） | Kotlin-first |
 | **异步方案** | 自定义线程池 + Handler | Kotlin 协程 |
 | **生命周期感知** | 无头 Fragment | `ViewTreeLifecycleOwner` |
-| **网络层** | 默认 HttpUrlConnection，可替换 OkHttp | 默认 [[OkHttp与Retrofit\|OkHttp]] |
+| **网络层** | 默认 HttpUrlConnection，可替换 OkHttp | 默认 [[1-OkHttp与Retrofit\|OkHttp]] |
 | **内存缓存** | ActiveResources + LruCache | 强引用 LruCache |
 | **磁盘缓存** | DiskLruCache | OkHttp 的 Cache / 自定义 DiskCache |
 | **Bitmap 复用** | BitmapPool（LruBitmapPool） | 依赖系统 `inBitmap`，2.x 移除了 BitmapPool |
@@ -680,7 +680,7 @@ public void preloadNextPage(List<String> urls) {
 
 **答：** Glide 通过向当前 Activity/Fragment 添加一个不可见的 `SupportRequestManagerFragment` 来感知生命周期。这个 Fragment 内部持有 `ActivityFragmentLifecycle`，`RequestManager` 注册为其 `LifecycleListener`。当 Activity 执行 `onStop()` 时，Fragment 同步回调，RequestManager 暂停所有请求；`onDestroy()` 时清理所有资源。
 
-不能在子线程调用 `Glide.with(activity)` 的原因：添加 Fragment 需要操作 `FragmentManager`，这是一个 UI 操作，必须在主线程执行。如果在子线程调用，Glide 会降级使用 `ApplicationContext`，此时无法绑定生命周期，可能导致 [[内存优化|内存泄漏]]。Glide 4.x 在子线程调用时会打印警告日志。
+不能在子线程调用 `Glide.with(activity)` 的原因：添加 Fragment 需要操作 `FragmentManager`，这是一个 UI 操作，必须在主线程执行。如果在子线程调用，Glide 会降级使用 `ApplicationContext`，此时无法绑定生命周期，可能导致 [[2-内存优化|内存泄漏]]。Glide 4.x 在子线程调用时会打印警告日志。
 
 ### Q3: Glide 的缓存 Key 包含哪些信息？同一张图片在不同尺寸 ImageView 中会缓存几份？
 
@@ -697,7 +697,7 @@ public void preloadNextPage(List<String> urls) {
 2. **协程驱动**：天然支持结构化并发和取消，与 ViewModel/Lifecycle 无缝集成
 3. **轻量**：方法数约 1500（Glide 约 8000），包体积约 250KB（Glide 约 500KB）
 4. **Compose 原生支持**：`coil-compose` 提供 `AsyncImage` 组件
-5. **Interceptor 架构**：借鉴 [[OkHttp与Retrofit|OkHttp]] 的拦截器链，扩展性强
+5. **Interceptor 架构**：借鉴 [[1-OkHttp与Retrofit|OkHttp]] 的拦截器链，扩展性强
 6. **零反射**：不使用注解处理器，编译速度更快
 
 选择建议：
@@ -746,7 +746,7 @@ Glide.with(context).load(url)
 
 6. **使用 `skipMemoryCache(true)`**：对一次性大图跳过内存缓存
 
-更多内存优化策略参见 [[内存优化]]。
+更多内存优化策略参见 [[2-内存优化]]。
 
 ---
 
@@ -946,6 +946,6 @@ Glide.with(context).load(url).into(new DrawableImageViewTarget(imageView) {
 
 ---
 
-> 📌 **总结**：Glide 是 Android 图片加载的事实标准，功能全面、社区成熟；Coil 是 Kotlin 时代的新选择，架构更现代、体积更轻。理解它们的缓存机制、生命周期绑定和 [[内存优化]] 策略，是 Android 高级开发的必备技能。
+> 📌 **总结**：Glide 是 Android 图片加载的事实标准，功能全面、社区成熟；Coil 是 Kotlin 时代的新选择，架构更现代、体积更轻。理解它们的缓存机制、生命周期绑定和 [[2-内存优化]] 策略，是 Android 高级开发的必备技能。
 > 
-> 延伸阅读：[[Bitmap与图片压缩]] · [[RecyclerView性能优化]] · [[OkHttp与Retrofit]] · [[Jetpack Compose]]
+> 延伸阅读：[[Bitmap与图片压缩]] · [[RecyclerView性能优化]] · [[1-OkHttp与Retrofit]] · [[Jetpack Compose]]

@@ -1,7 +1,7 @@
 # View 绘制流程：measure / layout / draw
 
 > 自定义 View 的三大核心阶段，从 MeasureSpec 到像素上屏的完整链路。
-> 关联：[[事件分发机制]] · [[自定义属性与TypedArray]]
+> 关联：[[8-事件分发机制]] · [[3-自定义属性与TypedArray]]
 
 ---
 
@@ -543,4 +543,4 @@ private static float spToPx(float sp) {
 
 ---
 
-> 相关笔记：[[事件分发机制]] · [[自定义属性与TypedArray]] · [[硬件加速与RenderThread]] · [[ConstraintLayout原理]]
+> 相关笔记：[[8-事件分发机制]] · [[3-自定义属性与TypedArray]] · [[硬件加速与RenderThread]] · [[ConstraintLayout原理]]

@@ -1,7 +1,7 @@
 # Binder 机制原理
 
 > Android 跨进程通信的核心机制，深入 Android Framework 的必经之路。
-> 相关：[[AIDL使用与实践]] | [[Messenger]]
+> 相关：[[2-AIDL使用与实践]] | [[3-Messenger]]
 
 ---
 
@@ -176,7 +176,7 @@ IPCThreadState::executeCommand(BR_TRANSACTION)
       → Binder.onTransact(code, data, reply) // Java 层 Stub
 ```
 
-对应到 [[AIDL使用与实践]] 中自动生成的代码：
+对应到 [[2-AIDL使用与实践]] 中自动生成的代码：
 
 ```java
 // AIDL 生成的 Stub（Server 端）
@@ -335,7 +335,7 @@ public class ClientActivity extends AppCompatActivity {
 }
 ```
 
-> `asInterface()` 通过 `queryLocalInterface()` 判断是否同进程。同进程返回 Stub 本身（无需 IPC），跨进程包装为 Proxy。详见 [[AIDL使用与实践]]。
+> `asInterface()` 通过 `queryLocalInterface()` 判断是否同进程。同进程返回 Stub 本身（无需 IPC），跨进程包装为 Proxy。详见 [[2-AIDL使用与实践]]。
 
 
 ---
@@ -357,7 +357,7 @@ public class ClientActivity extends AppCompatActivity {
 - `out`：Client 传空对象，Server 填充后回传给 Client
 - `inout`：双向传输，Client 发送数据，Server 修改后回传
 
-`out` 和 `inout` 增加额外拷贝开销，应尽量使用 `in`。详见 [[AIDL使用与实践]]。
+`out` 和 `inout` 增加额外拷贝开销，应尽量使用 `in`。详见 [[2-AIDL使用与实践]]。
 
 ### Q4：Binder 如何保证安全性？
 
@@ -376,7 +376,7 @@ public class ClientActivity extends AppCompatActivity {
 
 ### Q6：同进程调用 AIDL 接口会走 Binder 吗？
 
-**A**：不会。`Stub.asInterface()` 内部调用 `queryLocalInterface()`，如果 Client 和 Server 在同一进程，直接返回 Stub 对象本身，方法调用变成普通的本地函数调用，不经过 Binder 驱动，没有序列化开销。这也是 [[Messenger]] 在同进程场景下性能与直接调用无异的原因。
+**A**：不会。`Stub.asInterface()` 内部调用 `queryLocalInterface()`，如果 Client 和 Server 在同一进程，直接返回 Stub 对象本身，方法调用变成普通的本地函数调用，不经过 Binder 驱动，没有序列化开销。这也是 [[3-Messenger]] 在同进程场景下性能与直接调用无异的原因。
 
 
 ---
@@ -503,7 +503,7 @@ public class RemoteServiceManager {
 
 ## 参考与延伸
 
-- [[AIDL使用与实践]] — AIDL 的定义、编译产物分析、实战用法
-- [[Messenger]] — 基于 Binder 的轻量级 IPC 方案
+- [[2-AIDL使用与实践]] — AIDL 的定义、编译产物分析、实战用法
+- [[3-Messenger]] — 基于 Binder 的轻量级 IPC 方案
 - Android 源码：`frameworks/native/libs/binder/`、`drivers/android/binder.c`
 - 《Android 开发艺术探索》第 2 章 — IPC 机制

@@ -1,6 +1,6 @@
 # 混淆与 ProGuard 规则
 
-> 本文系统梳理 Android 混淆体系，涵盖 ProGuard / R8 核心概念、keep 规则语法、SDK 发布混淆最佳实践及常见踩坑，帮助开发者在 [[AAR与APK打包]] 流程中正确配置混淆，同时兼顾 [[最小化依赖与体积控制]]。
+> 本文系统梳理 Android 混淆体系，涵盖 ProGuard / R8 核心概念、keep 规则语法、SDK 发布混淆最佳实践及常见踩坑，帮助开发者在 [[5-AAR与APK打包]] 流程中正确配置混淆，同时兼顾 [[3-最小化依赖与体积控制]]。
 
 ---
 
@@ -30,7 +30,7 @@
 └──────────┘    └──────────┘    └───────────┘    └────────────┘
 ```
 
-1. **Shrink（压缩/树摇）**：移除未被引用的类、字段、方法。这是体积优化的核心步骤，与 [[最小化依赖与体积控制]] 直接相关。
+1. **Shrink（压缩/树摇）**：移除未被引用的类、字段、方法。这是体积优化的核心步骤，与 [[3-最小化依赖与体积控制]] 直接相关。
 2. **Optimize（优化）**：内联短方法、移除无用分支、常量折叠等字节码级优化。
 3. **Obfuscate（混淆）**：将类名、方法名、字段名重命名为 `a`、`b`、`c` 等短名称，增加逆向难度。
 4. **Preverify（预校验）**：为 Java 6+ 的 class 文件添加预校验信息。R8 直接输出 dex，此步骤已内化。
@@ -161,7 +161,7 @@ android {
 ```
 
 - `proguardFiles`：仅在**当前模块**编译时生效（Library 模块自身不做混淆，所以这个对 Library 意义不大）
-- `consumerProguardFiles`：规则文件会被打包进 [[AAR与APK打包]] 产物的 `proguard.txt` 中，App 集成时 R8 自动读取
+- `consumerProguardFiles`：规则文件会被打包进 [[5-AAR与APK打包]] 产物的 `proguard.txt` 中，App 集成时 R8 自动读取
 
 **SDK 的 consumer-rules.pro 示例：**
 
@@ -720,7 +720,7 @@ public class PluginLoader {
 
 ## 参考与延伸
 
-- [[最小化依赖与体积控制]] — 混淆的 shrink 步骤是体积优化的核心手段
-- [[AAR与APK打包]] — consumerProguardFiles 如何随 AAR 分发
+- [[3-最小化依赖与体积控制]] — 混淆的 shrink 步骤是体积优化的核心手段
+- [[5-AAR与APK打包]] — consumerProguardFiles 如何随 AAR 分发
 - [R8 官方文档](https://developer.android.com/build/shrink-code)
 - [ProGuard 规则语法参考](https://www.guardsquare.com/manual/configuration/usage)

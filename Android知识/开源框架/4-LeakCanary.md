@@ -1,6 +1,6 @@
 # LeakCanary
 
-> LeakCanary 是 Square 开源的 Android [[内存泄漏]]自动检测库，能在开发阶段自动发现 Activity、Fragment 等对象的泄漏，并给出完整的 GC Root 引用链，是 [[内存优化]] 的核心工具。
+> LeakCanary 是 Square 开源的 Android [[内存泄漏]]自动检测库，能在开发阶段自动发现 Activity、Fragment 等对象的泄漏，并给出完整的 GC Root 引用链，是 [[2-内存优化]] 的核心工具。
 
 ---
 
@@ -666,7 +666,7 @@ public class MyApp extends Application {
 
 ## 相关链接
 
-- [[内存优化]]
+- [[2-内存优化]]
 - [[Java 引用类型]]
 - [[Android 性能优化]]
 - [[Jetpack]]

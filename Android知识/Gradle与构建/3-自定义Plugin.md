@@ -1,7 +1,7 @@
 # 自定义 Gradle Plugin
 
 > 系统梳理 Gradle Plugin 的核心概念、实现方式、发布流程与实战踩坑。
-> 关联：[[Gradle生命周期与Task]] · [[Transform-API与ASM字节码插桩]] · [[AAR与APK打包]]
+> 关联：[[1-Gradle生命周期与Task]] · [[4-Transform-API与ASM字节码插桩]] · [[5-AAR与APK打包]]
 
 ---
 
@@ -14,9 +14,9 @@ Gradle Plugin 本质是**可复用的构建逻辑封装**，核心职责：
 - **封装 Task**：将一组相关 Task 打包，apply 即可使用
 - **扩展 DSL**：通过 Extension 向 `build.gradle` 注入自定义配置块
 - **统一规范**：多模块项目中强制统一编译版本、依赖、代码检查等
-- **字节码处理**：结合 [[Transform-API与ASM字节码插桩]] 实现编译期插桩
+- **字节码处理**：结合 [[4-Transform-API与ASM字节码插桩]] 实现编译期插桩
 
-Plugin 在 Configuration 阶段被 apply，注册的 Task 在 Execution 阶段执行，详见 [[Gradle生命周期与Task]]。
+Plugin 在 Configuration 阶段被 apply，注册的 Task 在 Execution 阶段执行，详见 [[1-Gradle生命周期与Task]]。
 
 ### 1.2 三种实现方式
 
@@ -435,4 +435,4 @@ my-audit-plugin/
 
 ---
 
-> 📌 延伸阅读：[[Gradle生命周期与Task]] · [[Transform-API与ASM字节码插桩]] · [[AAR与APK打包]]
+> 📌 延伸阅读：[[1-Gradle生命周期与Task]] · [[4-Transform-API与ASM字节码插桩]] · [[5-AAR与APK打包]]

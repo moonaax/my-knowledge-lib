@@ -2,7 +2,7 @@
 
 > 洁净架构（Clean Architecture）由 Robert C. Martin（Uncle Bob）于 2012 年提出，通过**分层**和**依赖规则**将业务逻辑与框架、UI、数据库等外部细节彻底解耦。
 
-相关主题：[[MVC-MVP-MVVM-MVI]] · [[依赖注入]]
+相关主题：[[1-MVC-MVP-MVVM-MVI]] · [[3-依赖注入]]
 
 ---
 
@@ -175,7 +175,7 @@ class GetArticleListUseCase(
 
 ### 2.4 依赖反转原则
 
-依赖反转是 Clean Architecture 运转的**基石**，参见 [[依赖注入]]。
+依赖反转是 Clean Architecture 运转的**基石**，参见 [[3-依赖注入]]。
 
 - UseCase（内层）依赖 Repository **接口**（定义在 domain 层）
 - RepositoryImpl（外层）实现该接口
@@ -222,11 +222,11 @@ news-app/
 
 ### Q1: 什么是 Clean Architecture？核心原则是什么？
 
-**答：** Clean Architecture 是 Uncle Bob 提出的架构思想，核心是通过同心圆分层（Entities → Use Cases → Interface Adapters → Frameworks）和**依赖规则**（源码依赖只能从外层指向内层）实现业务逻辑与技术细节的解耦。核心原则包括：依赖规则（向内依赖）、关注点分离、依赖反转（内层定义接口，外层实现）、可测试性（业务逻辑脱离框架可单测）。它与 [[MVC-MVP-MVVM-MVI]] 是互补关系——Clean Architecture 关注整体系统架构，MVVM/MVI 关注表现层组织。
+**答：** Clean Architecture 是 Uncle Bob 提出的架构思想，核心是通过同心圆分层（Entities → Use Cases → Interface Adapters → Frameworks）和**依赖规则**（源码依赖只能从外层指向内层）实现业务逻辑与技术细节的解耦。核心原则包括：依赖规则（向内依赖）、关注点分离、依赖反转（内层定义接口，外层实现）、可测试性（业务逻辑脱离框架可单测）。它与 [[1-MVC-MVP-MVVM-MVI]] 是互补关系——Clean Architecture 关注整体系统架构，MVVM/MVI 关注表现层组织。
 
 ### Q2: 依赖规则如何通过依赖反转实现？
 
-**答：** UseCase（内层）需要调用数据库/网络（外层）获取数据，看似违反依赖规则。解决方案是 DIP：在 domain 层定义 Repository 接口，data 层提供实现，通过 [[依赖注入]] 在运行时绑定。这样 domain 层的编译依赖不会指向 data 层。
+**答：** UseCase（内层）需要调用数据库/网络（外层）获取数据，看似违反依赖规则。解决方案是 DIP：在 domain 层定义 Repository 接口，data 层提供实现，通过 [[3-依赖注入]] 在运行时绑定。这样 domain 层的编译依赖不会指向 data 层。
 
 ```java
 // domain 层定义接口
@@ -307,7 +307,7 @@ public void execute_withValidId_returnsUser() {
 
 ### 4.3 与 MVVM / MVI 的结合
 
-Clean Architecture 定义**整体系统架构**，[[MVC-MVP-MVVM-MVI]] 中的 MVVM/MVI 定义**表现层架构**，天然互补。
+Clean Architecture 定义**整体系统架构**，[[1-MVC-MVP-MVVM-MVI]] 中的 MVVM/MVI 定义**表现层架构**，天然互补。
 
 **Clean Arch + MVVM**（最主流组合）：
 

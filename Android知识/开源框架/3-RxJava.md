@@ -6,7 +6,7 @@ created: 2026-04-16
 
 # RxJava
 
-> RxJava 是 ReactiveX 在 JVM 上的实现，基于 [[响应式架构]] 思想，通过可观察序列组合异步与事件驱动程序。它是 Android 开发中最流行的异步框架，也是 [[OkHttp与Retrofit]] 网络层的核心搭档。
+> RxJava 是 ReactiveX 在 JVM 上的实现，基于 [[4-响应式架构]] 思想，通过可观察序列组合异步与事件驱动程序。它是 Android 开发中最流行的异步框架，也是 [[1-OkHttp与Retrofit]] 网络层的核心搭档。
 
 ---
 
@@ -642,8 +642,8 @@ apiService.getUser()
 
 ## 参考与关联
 
-- [[响应式架构]] — 响应式编程理论基础
-- [[OkHttp与Retrofit]] — RxJava 与 Retrofit 配合使用
+- [[4-响应式架构]] — 响应式编程理论基础
+- [[1-OkHttp与Retrofit]] — RxJava 与 Retrofit 配合使用
 - [[Android Jetpack]] — Lifecycle 与 AutoDispose 集成
 - [[Kotlin协程]] — RxJava 的现代替代方案
 - 官方文档：[ReactiveX](http://reactivex.io/)

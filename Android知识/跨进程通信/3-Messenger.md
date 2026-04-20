@@ -1,6 +1,6 @@
 # Messenger 跨进程通信
 
-> Messenger 是 Android 提供的基于 [[AIDL使用与实践]] 的轻量级跨进程通信方案，底层依赖 [[Binder机制原理]]，通过 [[Handler消息机制]] 串行处理消息。
+> Messenger 是 Android 提供的基于 [[2-AIDL使用与实践]] 的轻量级跨进程通信方案，底层依赖 [[1-Binder机制原理]]，通过 [[6-Handler消息机制]] 串行处理消息。
 
 ---
 
@@ -129,7 +129,7 @@ private final class MessengerImpl extends IMessenger.Stub {
 
 1. 客户端的 `Messenger.send()` → `IMessenger.Stub.Proxy.send()`（跨进程 Binder 调用）
 2. 服务端的 `MessengerImpl.send()` 被触发
-3. 内部调用 `Handler.sendMessage(msg)` 将消息投递到 [[Handler消息机制]] 的 MessageQueue
+3. 内部调用 `Handler.sendMessage(msg)` 将消息投递到 [[6-Handler消息机制]] 的 MessageQueue
 4. Handler 在其 Looper 线程中串行处理消息
 
 ### 2.4 完整调用链
@@ -303,13 +303,13 @@ public class MessengerActivity extends AppCompatActivity {
 
 ### Q1：Messenger 的底层实现原理是什么？
 
-Messenger 底层基于 AIDL。系统预定义了 `IMessenger.aidl` 接口，其中只有一个 `oneway void send(in Message msg)` 方法。Messenger 构造时，服务端通过 `Handler` 内部的 `MessengerImpl`（继承 `IMessenger.Stub`）提供 Binder 实体；客户端通过 `IMessenger.Stub.asInterface(binder)` 获取代理。调用 `send()` 本质是一次 [[Binder机制原理]] 的跨进程调用，消息到达服务端后通过 `Handler.sendMessage()` 投递到 MessageQueue 串行处理。
+Messenger 底层基于 AIDL。系统预定义了 `IMessenger.aidl` 接口，其中只有一个 `oneway void send(in Message msg)` 方法。Messenger 构造时，服务端通过 `Handler` 内部的 `MessengerImpl`（继承 `IMessenger.Stub`）提供 Binder 实体；客户端通过 `IMessenger.Stub.asInterface(binder)` 获取代理。调用 `send()` 本质是一次 [[1-Binder机制原理]] 的跨进程调用，消息到达服务端后通过 `Handler.sendMessage()` 投递到 MessageQueue 串行处理。
 
 ### Q2：Messenger 为什么是串行的？能否改成并行？
 
 因为服务端的 `MessengerImpl.send()` 内部调用的是 `Handler.sendMessage()`，消息被投递到 Handler 关联的 Looper 的 MessageQueue 中，由 Looper 逐条取出处理。即使多个客户端同时发送消息，也会在 MessageQueue 中排队。
 
-如果需要并行处理，应直接使用 [[AIDL使用与实践]]，AIDL 的方法调用在 Binder 线程池中并发执行。Messenger 本身无法改成并行，这是其设计决定的。
+如果需要并行处理，应直接使用 [[2-AIDL使用与实践]]，AIDL 的方法调用在 Binder 线程池中并发执行。Messenger 本身无法改成并行，这是其设计决定的。
 
 ### Q3：Messenger 如何实现双向通信？
 
@@ -364,7 +364,7 @@ public void handleMessage(Message msg) {
 }
 ```
 
-此时应考虑迁移到 [[AIDL使用与实践]]。
+此时应考虑迁移到 [[2-AIDL使用与实践]]。
 
 **2. 无同步返回值**
 
@@ -534,4 +534,4 @@ public void sendMessage() {
 
 ---
 
-> 相关主题：[[Binder机制原理]] · [[AIDL使用与实践]] · [[Handler消息机制]]
+> 相关主题：[[1-Binder机制原理]] · [[2-AIDL使用与实践]] · [[6-Handler消息机制]]

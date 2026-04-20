@@ -1,6 +1,6 @@
 # AIDL 使用与实践
 
-> AIDL（Android Interface Definition Language）是 Android 提供的跨进程通信接口定义语言，底层基于 [[Binder机制原理]]，是实现 IPC 最常用、最灵活的方式之一。
+> AIDL（Android Interface Definition Language）是 Android 提供的跨进程通信接口定义语言，底层基于 [[1-Binder机制原理]]，是实现 IPC 最常用、最灵活的方式之一。
 
 ---
 
@@ -8,7 +8,7 @@
 
 ### 1.1 AIDL 是什么
 
-AIDL 是一种 **接口定义语言**，用于定义客户端与服务端之间跨进程通信的接口契约。编译器会根据 `.aidl` 文件自动生成 Java/Kotlin 代码，包含 `Stub`（服务端骨架）和 `Proxy`（客户端代理）两个核心类，开发者无需手动编写 [[Binder机制原理]] 的底层 transact/onTransact 逻辑。
+AIDL 是一种 **接口定义语言**，用于定义客户端与服务端之间跨进程通信的接口契约。编译器会根据 `.aidl` 文件自动生成 Java/Kotlin 代码，包含 `Stub`（服务端骨架）和 `Proxy`（客户端代理）两个核心类，开发者无需手动编写 [[1-Binder机制原理]] 的底层 transact/onTransact 逻辑。
 
 **核心流程：**
 
@@ -117,7 +117,7 @@ parcelable Book;
 
 ## 二、原理与源码
 
-AIDL 的本质是 [[Binder机制原理]] 的上层封装。编译器根据 `.aidl` 文件生成一个继承自 `IInterface` 的接口，内部包含 `Stub` 和 `Proxy` 两个关键类。
+AIDL 的本质是 [[1-Binder机制原理]] 的上层封装。编译器根据 `.aidl` 文件生成一个继承自 `IInterface` 的接口，内部包含 `Stub` 和 `Proxy` 两个关键类。
 
 ### 2.1 生成代码整体结构
 
@@ -664,7 +664,7 @@ public boolean onTransact(int code, Parcel data, Parcel reply, int flags) throws
 
 ### 5.3 大数据传输
 
-[[Binder机制原理]] 中 Binder 事务缓冲区大小约为 **1MB**（所有进行中的事务共享），单次传输数据过大会抛出 `TransactionTooLargeException`。
+[[1-Binder机制原理]] 中 Binder 事务缓冲区大小约为 **1MB**（所有进行中的事务共享），单次传输数据过大会抛出 `TransactionTooLargeException`。
 
 **解决方案一：分页查询**
 
@@ -779,4 +779,4 @@ AIDL 编译器有时不会检测到增量变化，修改 `.aidl` 文件后建议
 
 ---
 
-> 📌 **总结**：AIDL 是 Android 跨进程通信的核心工具，理解其背后的 [[Binder机制原理]] 是关键。实际开发中需要特别注意线程安全、权限校验和数据大小限制，合理选择 `in`/`out`/`inout` 方向标记以优化性能。
+> 📌 **总结**：AIDL 是 Android 跨进程通信的核心工具，理解其背后的 [[1-Binder机制原理]] 是关键。实际开发中需要特别注意线程安全、权限校验和数据大小限制，合理选择 `in`/`out`/`inout` 方向标记以优化性能。

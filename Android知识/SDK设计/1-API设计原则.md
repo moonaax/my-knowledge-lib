@@ -2,7 +2,7 @@
 
 > SDK 的公开 API 是与开发者签订的"契约"。一旦发布，每一个公开方法、每一个参数类型都成为承诺。好的 API 让正确的用法显而易见，错误的用法难以编译通过；差的 API 则让调用者在文档和源码之间反复横跳。本文聚焦 **易用性** 与 **向后兼容** 两大主题，结合 Kotlin/Java SDK 实践展开。
 
-相关主题：[[版本管理与发布]] · [[混淆与ProGuard规则]] · [[模块化设计]]
+相关主题：[[6-版本管理与发布]] · [[4-混淆与ProGuard规则]] · [[模块化设计]]
 
 ---
 
@@ -76,7 +76,7 @@ HcClient client = factory.create("default");
 | 新增功能（兼容） | MINOR | 1.1 → 1.2.0 | 新增方法、新增可选参数 |
 | Bug 修复 | PATCH | 1.2.0 → 1.2.1 | 内部实现修复 |
 
-与 [[版本管理与发布]] 配合，在 CI 中自动校验：MINOR 版本升级不允许出现二进制不兼容变更。
+与 [[6-版本管理与发布]] 配合，在 CI 中自动校验：MINOR 版本升级不允许出现二进制不兼容变更。
 
 ```kotlin
 // build.gradle.kts 中集成 japicmp
@@ -122,7 +122,7 @@ public fun HcClient(block: HcClientBuilder.() -> Unit): HcClient {
 }
 ```
 
-**注意 `internal` 的局限性**：Kotlin 的 `internal` 编译为 Java 的 `public`（方法名被 mangle），Java 调用者仍可通过反射或直接调用 mangle 后的方法名访问。配合 [[混淆与ProGuard规则]] 可进一步隐藏。
+**注意 `internal` 的局限性**：Kotlin 的 `internal` 编译为 Java 的 `public`（方法名被 mangle），Java 调用者仍可通过反射或直接调用 mangle 后的方法名访问。配合 [[4-混淆与ProGuard规则]] 可进一步隐藏。
 
 ```
 # proguard-rules.pro
@@ -347,7 +347,7 @@ interface HcClient {
 
 ### Q2: Kotlin 的 `internal` 修饰符能否真正阻止外部访问？
 
-**答：** 不能完全阻止。`internal` 在 Kotlin 编译后变为 Java 的 `public`，只是方法名会被 mangle（如追加模块名哈希）。Java 代码可以直接调用 mangle 后的方法名，反射也不受限制。因此 `internal` 是"君子协定"而非强制隔离。要进一步保护，需配合 ProGuard/R8 混淆（参见 [[混淆与ProGuard规则]]），将 internal 类的名称混淆掉，使外部无法稳定引用。此外，也可以通过将实现放在独立的 `impl` 模块中，只发布 API 模块的产物来实现物理隔离。
+**答：** 不能完全阻止。`internal` 在 Kotlin 编译后变为 Java 的 `public`，只是方法名会被 mangle（如追加模块名哈希）。Java 代码可以直接调用 mangle 后的方法名，反射也不受限制。因此 `internal` 是"君子协定"而非强制隔离。要进一步保护，需配合 ProGuard/R8 混淆（参见 [[4-混淆与ProGuard规则]]），将 internal 类的名称混淆掉，使外部无法稳定引用。此外，也可以通过将实现放在独立的 `impl` 模块中，只发布 API 模块的产物来实现物理隔离。
 
 ### Q3: 设计一个 SDK 初始化 API，如何同时兼顾 Kotlin 和 Java 调用者的体验？
 
@@ -446,7 +446,7 @@ package com.hc.sdk {
 }
 ```
 
-**CI 集成建议**：在 PR 流程中，MINOR 版本分支强制运行兼容性检查，不通过则阻止合并。API 签名文件（`api/current.txt`）纳入版本控制，变更需要显式审批。详见 [[版本管理与发布]]。
+**CI 集成建议**：在 PR 流程中，MINOR 版本分支强制运行兼容性检查，不通过则阻止合并。API 签名文件（`api/current.txt`）纳入版本控制，变更需要显式审批。详见 [[6-版本管理与发布]]。
 
 ### 4.3 Kotlin 与 Java 混合 API 的坑
 
@@ -550,4 +550,4 @@ fun fail(message: String): Nothing = throw IllegalStateException(message)
 
 > API 设计的终极目标：让调用者写出的代码看起来像是语言内置的功能，而非在"使用某个库"。
 
-相关主题：[[版本管理与发布]] · [[混淆与ProGuard规则]] · [[模块化设计]] · [[Kotlin 协程在 SDK 中的应用]]
+相关主题：[[6-版本管理与发布]] · [[4-混淆与ProGuard规则]] · [[模块化设计]] · [[Kotlin 协程在 SDK 中的应用]]

@@ -1,6 +1,6 @@
 # ContentProvider 跨进程通信
 
-> ContentProvider 是 Android 四大组件之一，专为**跨进程数据共享**设计，基于 [[Binder机制原理]] 实现 IPC，对外暴露统一 URI 接口。与 [[BroadcastReceiver与ContentProvider]] 配合可构建完整的跨进程数据通知体系。
+> ContentProvider 是 Android 四大组件之一，专为**跨进程数据共享**设计，基于 [[1-Binder机制原理]] 实现 IPC，对外暴露统一 URI 接口。与 [[3-BroadcastReceiver与ContentProvider]] 配合可构建完整的跨进程数据通知体系。
 
 ---
 
@@ -176,7 +176,7 @@ ContentResolver.query(uri)
 
 ### 2.3 Binder 调用链
 
-ContentProvider 的跨进程调用基于 [[Binder机制原理]]，完整调用链如下：
+ContentProvider 的跨进程调用基于 [[1-Binder机制原理]]，完整调用链如下：
 
 ```
 调用方进程                              Provider 进程
@@ -667,10 +667,10 @@ contentResolver.call(configUri, "syncData", null, extras);
 
 | 特性 | 说明 |
 |------|------|
-| 本质 | 基于 [[Binder机制原理]] 的 IPC 数据共享组件 |
+| 本质 | 基于 [[1-Binder机制原理]] 的 IPC 数据共享组件 |
 | 启动时机 | 早于 `Application.onCreate()` |
 | 线程模型 | onCreate 主线程；CRUD 在 Binder 线程池 |
 | 数据传输 | CursorWindow（Ashmem 共享内存） |
 | 扩展 | `call()` 支持自定义 RPC |
 
-> 参见：[[Binder机制原理]]、[[BroadcastReceiver与ContentProvider]]
+> 参见：[[1-Binder机制原理]]、[[3-BroadcastReceiver与ContentProvider]]

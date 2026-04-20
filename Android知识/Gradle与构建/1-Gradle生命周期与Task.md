@@ -1,7 +1,7 @@
 # Gradle 生命周期与 Task
 
 > Gradle 构建的核心在于理解其三阶段生命周期和 Task 的执行模型。本文从概念、原理、面试、实战四个维度全面梳理。
-> 相关笔记：[[自定义Plugin]] · [[AAR与APK打包]] · [[Gradle依赖管理]]
+> 相关笔记：[[3-自定义Plugin]] · [[5-AAR与APK打包]] · [[Gradle依赖管理]]
 
 ---
 
@@ -419,7 +419,7 @@ task goodTask {
 
 不能在执行阶段引用的对象：`Project`、`Gradle`、`Settings`、`TaskContainer`。
 
-这与 [[自定义Plugin]] 的开发密切相关，编写 Plugin 时需要注意 Configuration Cache 兼容性。
+这与 [[3-自定义Plugin]] 的开发密切相关，编写 Plugin 时需要注意 Configuration Cache 兼容性。
 
 ### 2.5 Task 避免配置时间浪费
 
@@ -562,7 +562,7 @@ Configuration Cache 的约束：Task 执行阶段不能引用 `Project`/`Gradle`
 }
 ```
 
-在 [[自定义Plugin]] 中应始终使用 `register` 方式注册 Task。
+在 [[3-自定义Plugin]] 中应始终使用 `register` 方式注册 Task。
 
 ---
 
@@ -685,7 +685,7 @@ android.applicationVariants.all { variant ->
 }
 ```
 
-这个案例与 [[AAR与APK打包]] 中的打包流程紧密关联。
+这个案例与 [[5-AAR与APK打包]] 中的打包流程紧密关联。
 
 ### 4.5 踩坑：Configuration Cache 不兼容
 
@@ -779,4 +779,4 @@ tasks.register('y') {
 | 惰性注册 | `tasks.register` 替代 `tasks.create` |
 | 性能优化 | 配置阶段避免 I/O、使用 `--profile`/`--scan` 分析 |
 
-> 延伸阅读：[[自定义Plugin]] · [[AAR与APK打包]] · [[Gradle依赖管理]] · [[Build Cache]]
+> 延伸阅读：[[3-自定义Plugin]] · [[5-AAR与APK打包]] · [[Gradle依赖管理]] · [[Build Cache]]

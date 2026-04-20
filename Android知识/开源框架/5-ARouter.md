@@ -2,7 +2,7 @@
 
 > ARouter 是阿里巴巴开源的 Android 路由框架，用于解决组件化开发中模块间通信、页面跳转、服务发现等核心问题。
 
-相关主题：[[组件间通信]] [[注解处理器APT与KSP]] [[Android组件化架构]]
+相关主题：[[2-组件间通信]] [[5-注解处理器APT与KSP]] [[Android组件化架构]]
 
 ---
 
@@ -17,7 +17,7 @@
 - **服务调用困难**：模块间缺少统一的服务发现机制
 - **缺乏统一拦截**：登录校验、降级策略等横切逻辑散落各处
 
-路由框架的本质是 **URL → 目标组件** 的映射表，通过字符串路径解耦模块间的直接依赖。参见 [[组件间通信]]。
+路由框架的本质是 **URL → 目标组件** 的映射表，通过字符串路径解耦模块间的直接依赖。参见 [[2-组件间通信]]。
 
 ### 1.2 核心功能
 
@@ -92,7 +92,7 @@ public class OrderDetailActivity extends AppCompatActivity {
 
 ### 2.1 APT 编译时生成路由表
 
-ARouter 使用 [[注解处理器APT与KSP]] 在编译期扫描 `@Route` 注解，为每个模块生成路由注册类：
+ARouter 使用 [[5-注解处理器APT与KSP]] 在编译期扫描 `@Route` 注解，为每个模块生成路由注册类：
 
 ```java
 // 自动生成 — 分组路由表
@@ -397,7 +397,7 @@ public class DegradeServiceImpl implements DegradeService {
 
 ### Q4：@Autowired 的实现原理？
 
-**A**：编译期 APT 为包含 `@Autowired` 的类生成 `XXX$$ARouter$$Autowired` 辅助类（实现 `ISyringe` 接口），其 `inject()` 方法通过 `getIntent().getExtras()` 取值赋给目标字段。运行时 `ARouter.getInstance().inject(this)` 找到辅助类并调用，无反射开销。支持 `required` 校验和自定义对象（需配合 `SerializationService`）。参见 [[注解处理器APT与KSP]]。
+**A**：编译期 APT 为包含 `@Autowired` 的类生成 `XXX$$ARouter$$Autowired` 辅助类（实现 `ISyringe` 接口），其 `inject()` 方法通过 `getIntent().getExtras()` 取值赋给目标字段。运行时 `ARouter.getInstance().inject(this)` 找到辅助类并调用，无反射开销。支持 `required` 校验和自定义对象（需配合 `SerializationService`）。参见 [[5-注解处理器APT与KSP]]。
 
 ### Q5：greenChannel() 是什么？
 
@@ -468,6 +468,6 @@ public class DegradeServiceImpl implements DegradeService {
 
 - [ARouter GitHub](https://github.com/alibaba/ARouter)
 - [TheRouter 官方文档](https://therouter.cn/)
-- [[组件间通信]]
-- [[注解处理器APT与KSP]]
+- [[2-组件间通信]]
+- [[5-注解处理器APT与KSP]]
 - [[Android组件化架构]]
