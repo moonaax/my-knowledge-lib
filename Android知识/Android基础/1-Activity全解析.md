@@ -10,12 +10,11 @@ Activity 是 Android 四大组件之一，代表一个"页面"。用户看到的
 
 ### 2.1 完整生命周期
 
-```
+````
 onCreate() → onStart() → onResume()
     ↕ 用户可见、可交互
 onPause() → onStop() → onDestroy()
-```
-
+````
 | 回调 | 含义 | 典型操作 |
 |------|------|---------|
 | `onCreate()` | Activity 被创建 | setContentView、初始化数据、绑定 ViewModel |
@@ -28,44 +27,41 @@ onPause() → onStop() → onDestroy()
 ### 2.2 常见场景的生命周期变化
 
 **从 A 跳转到 B：**
-```
+````
 A.onPause() → B.onCreate() → B.onStart() → B.onResume() → A.onStop()
-```
+````
 > 注意：A.onPause() 先执行，B 完全显示后才执行 A.onStop()。所以 onPause() 里不要做耗时操作，否则会影响 B 的启动速度。
 
 **从 B 返回 A：**
-```
+````
 B.onPause() → A.onRestart() → A.onStart() → A.onResume() → B.onStop() → B.onDestroy()
-```
-
+````
 **按 Home 键：**
-```
+````
 onPause() → onStop()
-```
-
+````
 **从后台回到前台：**
-```
+````
 onRestart() → onStart() → onResume()
-```
-
+````
 **屏幕旋转（未配置 configChanges）：**
-```
+````
 onPause() → onStop() → onSaveInstanceState() → onDestroy()
 → onCreate() → onStart() → onRestoreInstanceState() → onResume()
-```
+````
 > Activity 会被销毁重建！这就是为什么旋转屏幕后数据会丢失。
 
 **弹出 Dialog：**
-```
+````
 什么都不会调用！
-```
+````
 > Dialog 是 Window 层级的，不会触发 Activity 的 onPause()。除非弹出的是一个 DialogTheme 的 Activity。
 
 ### 2.3 onSaveInstanceState 与 onRestoreInstanceState
 
 当系统可能杀死 Activity 时（旋转屏幕、内存不足、进入后台），会调用 `onSaveInstanceState()` 保存状态。
 
-```java
+````java
 @Override
 protected void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
@@ -78,8 +74,7 @@ protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
     super.onRestoreInstanceState(savedInstanceState);
     String value = savedInstanceState.getString("key");
 }
-```
-
+````
 **调用时机：**
 - `onSaveInstanceState()`：在 `onStop()` 之前（Android P 之后是 `onStop()` 之后）
 - `onRestoreInstanceState()`：在 `onStart()` 之后
@@ -103,27 +98,23 @@ protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
 想象任务栈是一摞盘子：
 
 **standard：** 每次都往上放一个新盘子，不管下面有没有一样的。
-```
+````
 栈：[A] → 启动A → [A, A] → 启动A → [A, A, A]
-```
-
+````
 **singleTop：** 如果最上面那个盘子就是要放的，就不放了，直接复用。
-```
+````
 栈：[A, B] → 启动B → [A, B]（复用栈顶B，调用onNewIntent）
 栈：[A, B] → 启动A → [A, B, A]（A不在栈顶，创建新实例）
-```
-
+````
 **singleTask：** 在栈里找，找到了就把它上面的盘子全扔掉。
-```
+````
 栈：[A, B, C] → 启动A → [A]（B、C被销毁，A调用onNewIntent）
-```
-
+````
 **singleInstance：** 这个盘子太特殊了，必须单独放一摞。
-```
+````
 栈1：[A, B]
 栈2：[C]（singleInstance，独占）
-```
-
+````
 ### 3.3 taskAffinity
 
 每个 Activity 都有一个 `taskAffinity` 属性，表示它"倾向于"属于哪个任务栈。
@@ -132,13 +123,12 @@ protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
 - `singleTask` 会根据 taskAffinity 查找目标任务栈
 - 配合 `FLAG_ACTIVITY_NEW_TASK` 使用
 
-```xml
+````xml
 <activity
     android:name=".MainActivity"
     android:launchMode="singleTask"
     android:taskAffinity="com.example.main" />
-```
-
+````
 ### 3.4 常用 Intent Flags
 
 | Flag | 效果 |
@@ -149,20 +139,19 @@ protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
 | `FLAG_ACTIVITY_CLEAR_TASK` | 清空目标任务栈，配合 NEW_TASK 使用 |
 | `FLAG_ACTIVITY_NO_HISTORY` | 该 Activity 不会留在栈中（离开就销毁） |
 
-```java
+````java
 // 常见组合：回到首页并清空栈
 Intent intent = new Intent(this, MainActivity.class);
 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 startActivity(intent);
-```
-
+````
 ---
 
 ## 四、Activity 的启动流程（源码级）
 
 这是高级面试题，了解大致流程即可。
 
-```
+````
 1. startActivity()
 2. → Instrumentation.execStartActivity()
 3. → ATMS（ActivityTaskManagerService，跨进程 Binder 调用）
@@ -173,28 +162,25 @@ startActivity(intent);
 8. → ActivityThread.handleLaunchActivity()
 9. → Instrumentation.callActivityOnCreate()
 10. → Activity.onCreate()
-```
-
+````
 **简化版本（面试够用）：**
-```
+````
 App 进程 → Binder → system_server（ATMS）
 → 处理启动模式、任务栈
 → Binder 回调 → App 进程
 → ActivityThread → 反射创建 Activity → onCreate()
-```
-
+````
 ---
 
 ## 五、Activity 与 Window 的关系
 
-```
+````
 Activity
   └── PhoneWindow（Window 的唯一实现）
         └── DecorView（顶层 View，FrameLayout）
               ├── TitleBar / ActionBar
               └── ContentView（你 setContentView 设置的布局）
-```
-
+````
 - 每个 Activity 持有一个 `PhoneWindow`
 - `setContentView()` 实际上是把你的布局添加到 `DecorView` 的 `ContentView` 区域
 - `DecorView` 最终被添加到 `WindowManager`，由 `ViewRootImpl` 管理绘制

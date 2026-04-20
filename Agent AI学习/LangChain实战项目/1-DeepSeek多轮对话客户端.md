@@ -22,47 +22,43 @@
 
 DeepSeek 兼容 OpenAI 接口，只需改 `base_url`：
 
-```python
+````python
 llm = ChatOpenAI(
     model="deepseek-chat",
     base_url="https://api.deepseek.com",
     api_key=os.getenv("DEEPSEEK_API_KEY"),
 )
-```
-
+````
 ### 2. Prompt 模板
 
 `MessagesPlaceholder` 是关键，它会在运行时被替换为历史消息列表：
 
-```python
+````python
 prompt = ChatPromptTemplate.from_messages([
     ("system", "你是一个有帮助的 AI 助手"),
     MessagesPlaceholder(variable_name="history"),  # 历史消息插入点
     ("human", "{input}"),
 ])
-```
-
+````
 ### 3. LCEL 管道
 
 用 `|` 把 prompt 和 llm 串起来，这就是一个最简单的 Chain：
 
-```python
+````python
 chain = prompt | llm
-```
-
+````
 ### 4. 记忆管理
 
 `RunnableWithMessageHistory` 包装 Chain，自动存取对话历史：
 
-```python
+````python
 chain_with_memory = RunnableWithMessageHistory(
     chain,
     get_session_history,        # 返回 ChatMessageHistory 的函数
     input_messages_key="input",
     history_messages_key="history",
 )
-```
-
+````
 ## 学到了什么
 
 - DeepSeek 完全兼容 OpenAI SDK，切换模型只需改 `base_url` 和 `model`
@@ -89,11 +85,10 @@ chain_with_memory = RunnableWithMessageHistory(
 
 ### 架构
 
-```
+````
 Electron (index.html)  ←SSE→  FastAPI (server.py)  ←→  LangChain + DeepSeek
      前端界面                     /chat /clear              ChatOpenAI
-```
-
+````
 ### 新增技术栈
 
 | 组件 | 用途 |

@@ -8,7 +8,7 @@
 
 ### 2.1 整体结构
 
-```
+````
 输入文本 → Tokenizer → Embedding → [Transformer Blocks × N] → Output
                                           │
                                     ┌─────┴─────┐
@@ -16,20 +16,18 @@
                                     │ Feed-Forward   │
                                     │ Layer Norm     │
                                     └───────────────┘
-```
-
+````
 ### 2.2 Self-Attention 机制
 
 Self-Attention 是 Transformer 的核心，让模型理解词与词之间的关系：
 
-```
+````
 Q (Query)  = Input × W_q    # 我在找什么
 K (Key)    = Input × W_k    # 我能提供什么
 V (Value)  = Input × W_v    # 我的实际内容
 
 Attention(Q, K, V) = softmax(QK^T / √d_k) × V
-```
-
+````
 直觉理解：
 - 处理"他把苹果放在桌子上，然后吃了**它**"时
 - "它"的 Query 会与"苹果"的 Key 产生高注意力分数
@@ -76,7 +74,7 @@ Attention(Q, K, V) = softmax(QK^T / √d_k) × V
 
 ### 3.3 选型建议（2026 年 4 月）
 
-```
+````
 综合能力最强   → Gemini 3.1 Pro（性价比最高）/ GPT-5.4 Pro
 代码/编程     → Claude Sonnet 4.6（GitHub Copilot 默认）/ Claude Opus 4.6
 超长上下文    → Llama 4 Maverick（10M）/ Gemini 3.1 Pro（1M）
@@ -85,13 +83,12 @@ Attention(Q, K, V) = softmax(QK^T / √d_k) × V
 预算有限      → DeepSeek V3.2（$0.27/M tokens，比 Claude 便宜 18 倍）
 实时数据      → Grok 4.20（接入 X 实时数据）
 隐私优先      → Gemma 4（Apache 2.0，无限制）
-```
-
+````
 ## 4. Token 与计费
 
 ### 4.1 Token 概念
 
-```python
+````python
 # Token 不等于字符，也不等于单词
 "Hello, world!"     → ["Hello", ",", " world", "!"]     = 4 tokens
 "你好世界"           → ["你", "好", "世", "界"]           = 4 tokens
@@ -100,11 +97,10 @@ Attention(Q, K, V) = softmax(QK^T / √d_k) × V
 # 经验法则
 # 英文: 1 token ≈ 4 个字符 ≈ 0.75 个单词
 # 中文: 1 token ≈ 1-2 个汉字
-```
-
+````
 ### 4.2 计费模型
 
-```
+````
 总费用 = 输入 Token 数 × 输入单价 + 输出 Token 数 × 输出单价
 
 示例 (GPT-4o):
@@ -113,13 +109,12 @@ Attention(Q, K, V) = softmax(QK^T / √d_k) × V
 
   一次 Agent 调用（输入 2000 tokens，输出 500 tokens）:
   费用 = 2000/1M × $2.50 + 500/1M × $10.00 = $0.01
-```
-
+````
 ## 5. API 调用实践
 
 ### 5.1 OpenAI 风格 API
 
-```python
+````python
 from openai import OpenAI
 
 client = OpenAI(api_key="your-api-key")
@@ -136,11 +131,10 @@ response = client.chat.completions.create(
 )
 
 print(response.choices[0].message.content)
-```
-
+````
 ### 5.2 流式输出
 
-```python
+````python
 # 流式输出 - 适合实时展示
 stream = client.chat.completions.create(
     model="gpt-4o",
@@ -151,11 +145,10 @@ stream = client.chat.completions.create(
 for chunk in stream:
     if chunk.choices[0].delta.content:
         print(chunk.choices[0].delta.content, end="")
-```
-
+````
 ### 5.3 多轮对话
 
-```python
+````python
 # 维护对话历史
 conversation = [
     {"role": "system", "content": "你是一个 Python 专家"}
@@ -176,11 +169,10 @@ def chat(user_input: str) -> str:
 # 使用
 chat("如何读取 JSON 文件?")
 chat("如果文件很大怎么办?")  # 模型记得上一轮的上下文
-```
-
+````
 ### 5.4 使用国产模型 API
 
-```python
+````python
 # 通义千问 - 兼容 OpenAI 格式
 client = OpenAI(
     api_key="your-dashscope-key",
@@ -197,13 +189,12 @@ client = OpenAI(
     api_key="your-deepseek-key",
     base_url="https://api.deepseek.com"
 )
-```
-
+````
 ## 6. Embedding 模型
 
 Embedding 将文本转为向量，是 RAG 和语义搜索的基础：
 
-```python
+````python
 # 生成文本向量
 response = client.embeddings.create(
     model="text-embedding-3-small",
@@ -225,8 +216,7 @@ v3 = get_embedding("今天天气怎么样")
 
 print(cosine_similarity(v1, v2))  # ~0.92 高相似度
 print(cosine_similarity(v1, v3))  # ~0.45 低相似度
-```
-
+````
 ### 主流 Embedding 模型
 
 | 模型 | 维度 | 特点 |
@@ -257,7 +247,7 @@ print(cosine_similarity(v1, v3))  # ~0.45 低相似度
 
 ## 8. 本地部署方案
 
-```bash
+````bash
 # 使用 Ollama 本地运行模型
 # 安装
 curl -fsSL https://ollama.com/install.sh | sh
@@ -272,9 +262,8 @@ curl http://localhost:11434/v1/chat/completions \
     "model": "llama3:8b",
     "messages": [{"role": "user", "content": "Hello"}]
   }'
-```
-
-```python
+````
+````python
 # Python 中使用本地模型
 client = OpenAI(
     base_url="http://localhost:11434/v1",
@@ -285,8 +274,7 @@ response = client.chat.completions.create(
     model="llama3:8b",
     messages=[{"role": "user", "content": "你好"}]
 )
-```
-
+````
 ---
 
 ## 面试题精选

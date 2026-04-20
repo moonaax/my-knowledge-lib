@@ -14,7 +14,7 @@ Intent 是 Android 中组件之间通信的"信使"。你要启动一个 Activit
 
 明确指定目标组件的类名，通常用于 App 内部跳转。
 
-```java
+````java
 // 指定目标 Activity
 Intent intent = new Intent(this, DetailActivity.class);
 intent.putExtra("id", 123);
@@ -23,13 +23,12 @@ startActivity(intent);
 // 指定目标 Service
 Intent intent = new Intent(this, MyService.class);
 startService(intent);
-```
-
+````
 ### 2.2 隐式 Intent
 
 不指定具体组件，而是声明一个 Action，系统根据 IntentFilter 匹配合适的组件。通常用于跨 App 调用。
 
-```java
+````java
 // 打开浏览器
 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.example.com"));
 startActivity(intent);
@@ -47,8 +46,7 @@ startActivity(Intent.createChooser(shareIntent, "分享到"));
 // 拍照
 Intent captureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 startActivityForResult(captureIntent, REQUEST_CODE);
-```
-
+````
 ### 2.3 对比
 
 | 对比项 | 显式 Intent | 隐式 Intent |
@@ -70,36 +68,33 @@ startActivityForResult(captureIntent, REQUEST_CODE);
 - Intent 中的 Action 必须和 IntentFilter 中的**某一个**匹配（完全相等）
 - Intent 没有设置 Action → 只要 IntentFilter 有至少一个 Action 就匹配成功
 
-```xml
+````xml
 <intent-filter>
     <action android:name="com.example.ACTION_A" />
     <action android:name="com.example.ACTION_B" />
     <!-- Intent 的 Action 是 A 或 B 都能匹配 -->
 </intent-filter>
-```
-
+````
 ### 3.2 Category 匹配
 
 - Intent 中的**所有** Category 都必须在 IntentFilter 中找到对应的
 - `startActivity()` 会自动添加 `CATEGORY_DEFAULT`，所以 IntentFilter 必须包含它
 
-```xml
+````xml
 <intent-filter>
     <action android:name="com.example.ACTION_A" />
     <category android:name="android.intent.category.DEFAULT" />
     <!-- 必须有 DEFAULT，否则隐式 Intent 匹配不到 -->
 </intent-filter>
-```
-
+````
 ### 3.3 Data 匹配
 
 Data 由 URI 和 MIME Type 组成：
 
-```
+````
 scheme://host:port/path
-```
-
-```xml
+````
+````xml
 <intent-filter>
     <action android:name="android.intent.action.VIEW" />
     <category android:name="android.intent.category.DEFAULT" />
@@ -107,8 +102,7 @@ scheme://host:port/path
           android:host="www.example.com"
           android:pathPrefix="/article" />
 </intent-filter>
-```
-
+````
 匹配规则：
 - 如果 IntentFilter 只有 MIME Type → Intent 也只能有 MIME Type
 - 如果 IntentFilter 有 URI + MIME Type → Intent 两者都要匹配
@@ -116,7 +110,7 @@ scheme://host:port/path
 
 ### 3.4 匹配安全
 
-```java
+````java
 // 隐式 Intent 启动前应该检查是否有匹配的组件
 Intent intent = new Intent("com.example.ACTION_A");
 if (intent.resolveActivity(getPackageManager()) != null) {
@@ -124,11 +118,10 @@ if (intent.resolveActivity(getPackageManager()) != null) {
 } else {
     // 没有匹配的组件，提示用户
 }
-```
-
+````
 > Android 11+ 需要在 Manifest 中声明 `<queries>` 才能查询到其他 App 的组件（包可见性限制）。
 
-```xml
+````xml
 <!-- AndroidManifest.xml -->
 <queries>
     <intent>
@@ -136,8 +129,7 @@ if (intent.resolveActivity(getPackageManager()) != null) {
         <data android:scheme="https" />
     </intent>
 </queries>
-```
-
+````
 ---
 
 ## 四、PendingIntent
@@ -155,7 +147,7 @@ PendingIntent 是对 Intent 的一层包装，它代表一个"将来要执行的
 
 ### 4.2 三种类型
 
-```java
+````java
 // 启动 Activity
 PendingIntent pendingIntent = PendingIntent.getActivity(
     context, requestCode, intent,
@@ -173,8 +165,7 @@ PendingIntent pendingIntent = PendingIntent.getBroadcast(
     context, requestCode, intent,
     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
 );
-```
-
+````
 ### 4.3 Flags
 
 | Flag | 含义 |
@@ -186,12 +177,11 @@ PendingIntent pendingIntent = PendingIntent.getBroadcast(
 | `FLAG_IMMUTABLE` | PendingIntent 不可被修改（Android 12+ 必须指定 IMMUTABLE 或 MUTABLE） |
 | `FLAG_MUTABLE` | PendingIntent 可被修改 |
 
-```java
+````java
 // Android 12+ 必须明确指定可变性
 // 通知点击通常用 IMMUTABLE
 int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
-```
-
+````
 ### 4.4 PendingIntent 的匹配规则
 
 两个 PendingIntent 被认为是"相同的"条件：
@@ -201,7 +191,7 @@ int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
 
 所以如果你用不同的 extras 创建多个通知的 PendingIntent，必须用不同的 requestCode，否则会互相覆盖。
 
-```java
+````java
 // ❌ 错误：requestCode 相同，extras 不同但会被覆盖
 PendingIntent.getActivity(ctx, 0, intent1, flags);  // intent1 有 extra "id"=1
 PendingIntent.getActivity(ctx, 0, intent2, flags);  // intent2 有 extra "id"=2
@@ -210,8 +200,7 @@ PendingIntent.getActivity(ctx, 0, intent2, flags);  // intent2 有 extra "id"=2
 // ✅ 正确：用不同的 requestCode
 PendingIntent.getActivity(ctx, 1, intent1, flags);
 PendingIntent.getActivity(ctx, 2, intent2, flags);
-```
-
+````
 ---
 
 ## 五、Deep Link 与 App Links
@@ -220,7 +209,7 @@ PendingIntent.getActivity(ctx, 2, intent2, flags);
 
 通过 URI 直接打开 App 的某个页面。
 
-```xml
+````xml
 <!-- AndroidManifest.xml -->
 <activity android:name=".DetailActivity">
     <intent-filter>
@@ -231,22 +220,20 @@ PendingIntent.getActivity(ctx, 2, intent2, flags);
               android:host="detail" />
     </intent-filter>
 </activity>
-```
-
-```java
+````
+````java
 // 通过 URI 打开
 // myapp://detail?id=123
 Uri uri = getIntent().getData();
 String id = uri != null ? uri.getQueryParameter("id") : null;
-```
-
+````
 **Deep Link 的问题：** 点击链接时系统会弹出选择器（让用户选择用哪个 App 打开），体验不好。
 
 ### 5.2 App Links（Android 6.0+）
 
 App Links 是 Deep Link 的升级版，通过域名验证实现**免弹窗直接打开**。
 
-```xml
+````xml
 <activity android:name=".DetailActivity">
     <intent-filter android:autoVerify="true">
         <action android:name="android.intent.action.VIEW" />
@@ -257,14 +244,12 @@ App Links 是 Deep Link 的升级版，通过域名验证实现**免弹窗直接
               android:pathPrefix="/detail" />
     </intent-filter>
 </activity>
-```
-
+````
 需要在你的域名下放一个验证文件：
-```
+````
 https://www.example.com/.well-known/assetlinks.json
-```
-
-```json
+````
+````json
 [{
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
@@ -273,8 +258,7 @@ https://www.example.com/.well-known/assetlinks.json
         "sha256_cert_fingerprints": ["签名指纹"]
     }
 }]
-```
-
+````
 ### 5.3 Deep Link vs App Links
 
 | 对比项 | Deep Link | App Links |
@@ -294,7 +278,7 @@ Intent 通过 Bundle 传递数据，底层走 Binder。Binder 的事务缓冲区
 
 超过限制会抛 `TransactionTooLargeException`。
 
-```java
+````java
 // ❌ 不要通过 Intent 传大数据
 intent.putExtra("bitmap", largeBitmap);  // 可能崩溃
 
@@ -302,8 +286,7 @@ intent.putExtra("bitmap", largeBitmap);  // 可能崩溃
 intent.putExtra("image_uri", imageUri);
 
 // ✅ 或者用 ViewModel / 数据库 / 文件共享
-```
-
+````
 ### 6.2 Serializable vs Parcelable
 
 | 对比项 | Serializable | Parcelable |
@@ -312,7 +295,7 @@ intent.putExtra("image_uri", imageUri);
 | 性能 | 慢（用反射） | 快（直接写入内存） |
 | 使用场景 | 简单场景、持久化 | Android 组件间传递 |
 
-```java
+````java
 // Java 中手动实现 Parcelable
 public class User implements Parcelable {
     private int id;
@@ -339,8 +322,7 @@ public class User implements Parcelable {
         public User[] newArray(int size) { return new User[size]; }
     };
 }
-```
-
+````
 ---
 
 ## 七、面试题库
@@ -381,7 +363,7 @@ public class User implements Parcelable {
 
 > 现在用 Activity Result API（registerForActivityResult）。旧的 startActivityForResult 有几个问题：requestCode 容易冲突、在 Fragment 中嵌套调用混乱、代码分散在 onActivityResult 中不好维护。新 API 基于 ActivityResultContract，类型安全，代码内聚，而且支持在 Fragment 和 Activity 中统一使用。常用的 Contract 有 StartActivityForResult、RequestPermission、TakePicture、GetContent 等。
 
-```java
+````java
 // 新方式
 ActivityResultLauncher<Intent> launcher = registerForActivityResult(
     new ActivityResultContracts.StartActivityForResult(),
@@ -394,8 +376,7 @@ ActivityResultLauncher<Intent> launcher = registerForActivityResult(
 
 // 启动
 launcher.launch(new Intent(this, SecondActivity.class));
-```
-
+````
 ### Q10：Intent 的 Flag 有哪些常用的？分别什么效果？
 
 > 最常用的几个：FLAG_ACTIVITY_NEW_TASK 在新任务栈中启动，从非 Activity 上下文（Service、BroadcastReceiver）启动 Activity 时必须加这个 Flag。FLAG_ACTIVITY_CLEAR_TOP 如果目标 Activity 已在栈中，清除其上方所有 Activity。FLAG_ACTIVITY_SINGLE_TOP 等同于 singleTop 启动模式，栈顶复用。FLAG_ACTIVITY_CLEAR_TASK 配合 NEW_TASK 使用，清空整个任务栈再启动。实际项目中最常见的组合是 CLEAR_TOP + SINGLE_TOP，用于"回到首页"的场景，效果等同于 singleTask。

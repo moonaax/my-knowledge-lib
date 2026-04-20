@@ -17,23 +17,21 @@
 
 ### 2.1 核心概念
 
-```
+````
 AutoGen 的核心 = Agent 之间的对话
 
 UserProxy Agent  → 代表用户，可执行代码
 Assistant Agent  → AI 助手，负责推理和生成
 Group Chat       → 多个 Agent 的群聊协作
-```
-
+````
 ### 2.2 安装
 
-```bash
+````bash
 pip install autogen-agentchat autogen-ext[openai]
-```
-
+````
 ### 2.3 双 Agent 对话
 
-```python
+````python
 from autogen import AssistantAgent, UserProxyAgent
 
 # AI 助手
@@ -56,11 +54,10 @@ user_proxy.initiate_chat(
     assistant,
     message="写一个 Python 脚本，分析 CSV 文件中的销售数据并生成图表"
 )
-```
-
+````
 ### 2.4 Group Chat — 多 Agent 协作
 
-```python
+````python
 from autogen import GroupChat, GroupChatManager
 
 # 定义多个 Agent
@@ -97,30 +94,27 @@ user_proxy.initiate_chat(
     manager,
     message="开发一个 REST API，包含用户注册、登录和个人信息管理功能"
 )
-```
-
+````
 ## 3. CrewAI
 
 ### 3.1 核心概念
 
-```
+````
 CrewAI 的核心 = 角色 + 任务 + 流程
 
 Agent  → 有角色、目标、背景的智能体
 Task   → 具体的任务描述和期望输出
 Crew   → Agent 团队，按流程协作
 Tool   → Agent 可使用的工具
-```
-
+````
 ### 3.2 安装
 
-```bash
+````bash
 pip install crewai crewai-tools
-```
-
+````
 ### 3.3 基础示例
 
-```python
+````python
 from crewai import Agent, Task, Crew, Process
 
 # 定义 Agent
@@ -165,11 +159,10 @@ crew = Crew(
 # 执行
 result = crew.kickoff()
 print(result)
-```
-
+````
 ### 3.4 自定义工具
 
-```python
+````python
 from crewai.tools import tool
 
 @tool("搜索技术文档")
@@ -185,20 +178,18 @@ researcher = Agent(
     tools=[search_docs],
     llm="gpt-4o"
 )
-```
-
+````
 ## 4. MetaGPT — 软件公司模拟
 
 MetaGPT 模拟一个软件公司的完整团队：
 
-```
+````
 产品经理 → 需求分析、PRD 文档
 架构师   → 系统设计、技术选型
 工程师   → 代码实现
 QA       → 测试用例、质量保证
-```
-
-```python
+````
+````python
 from metagpt.software_company import SoftwareCompany
 from metagpt.roles import ProjectManager, Architect, Engineer, QaEngineer
 
@@ -213,13 +204,12 @@ async def main():
     company.invest(investment=10.0)  # 预算（API 费用）
     company.start_project("开发一个待办事项管理的 Web 应用")
     await company.run(n_round=5)
-```
-
+````
 ## 5. 多 Agent 设计原则
 
 ### 5.1 角色设计
 
-```
+````
 好的角色设计:
 ✅ 职责单一明确
 ✅ 有清晰的输入/输出定义
@@ -229,11 +219,10 @@ async def main():
 ❌ 一个 Agent 什么都做
 ❌ 角色职责重叠
 ❌ 没有明确的协作流程
-```
-
+````
 ### 5.2 协作模式
 
-```
+````
 1. 顺序模式 (Sequential)
    A → B → C → 输出
    适合: 流水线式任务
@@ -249,8 +238,7 @@ async def main():
 4. 投票模式 (Voting)
    [Agent1, Agent2, Agent3] → 多数决
    适合: 需要可靠性的场景
-```
-
+````
 ### 5.3 常见陷阱
 
 | 陷阱 | 解决方案 |
@@ -262,15 +250,14 @@ async def main():
 
 ## 6. 框架选型建议
 
-```
+````
 简单的双 Agent 对话     → AutoGen
 角色明确的团队协作       → CrewAI
 需要精细流程控制         → LangGraph
 模拟软件开发流程         → MetaGPT
 生产环境部署            → LangGraph（最成熟）
 快速原型验证            → CrewAI（最简单）
-```
-
+````
 ---
 
 ## 面试题精选

@@ -6,25 +6,23 @@ LlamaIndex（原 GPT Index）是一个专注于**数据连接和检索**的 LLM 
 
 ### 核心定位
 
-```
+````
 LangChain  → 通用 LLM 应用框架（Agent、Chain、工具编排）
 LlamaIndex → 数据索引和检索框架（RAG、知识库、数据查询）
 
 两者互补，可以一起使用
-```
-
+````
 ### 核心能力
 
-```
+````
 数据连接 → 支持 100+ 数据源（PDF、数据库、API、网页...）
 数据索引 → 多种索引策略（向量、关键词、树形、知识图谱）
 查询引擎 → 智能检索 + LLM 生成回答
 Agent    → 基于数据的智能 Agent
-```
-
+````
 ## 2. 安装与配置
 
-```bash
+````bash
 # 核心包
 pip install llama-index
 
@@ -33,16 +31,14 @@ pip install llama-index-llms-openai
 pip install llama-index-embeddings-openai
 pip install llama-index-vector-stores-chroma
 pip install llama-index-readers-file  # PDF、DOCX 等
-```
-
-```python
+````
+````python
 import os
 os.environ["OPENAI_API_KEY"] = "your-key"
-```
-
+````
 ## 3. 快速开始 — 5 分钟构建知识库问答
 
-```python
+````python
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
 
 # 1. 加载文档
@@ -55,13 +51,12 @@ index = VectorStoreIndex.from_documents(documents)
 query_engine = index.as_query_engine()
 response = query_engine.query("这个项目的主要功能是什么?")
 print(response)
-```
-
+````
 ## 4. 数据连接 — Data Connectors
 
 ### 4.1 内置 Reader
 
-```python
+````python
 from llama_index.core import SimpleDirectoryReader
 
 # 自动识别文件类型（PDF、DOCX、TXT、MD、CSV...）
@@ -70,11 +65,10 @@ documents = SimpleDirectoryReader(
     recursive=True,           # 递归子目录
     required_exts=[".pdf", ".md"],  # 过滤文件类型
 ).load_data()
-```
-
+````
 ### 4.2 LlamaHub — 社区数据连接器
 
-```python
+````python
 # 从数据库加载
 from llama_index.readers.database import DatabaseReader
 
@@ -92,11 +86,10 @@ from llama_index.readers.notion import NotionPageReader
 
 reader = NotionPageReader(integration_token="your-token")
 documents = reader.load_data(page_ids=["page-id"])
-```
-
+````
 ### 4.3 文档处理
 
-```python
+````python
 from llama_index.core.node_parser import SentenceSplitter
 
 # 文档分块
@@ -105,13 +98,12 @@ parser = SentenceSplitter(
     chunk_overlap=200,    # 块之间重叠 token 数
 )
 nodes = parser.get_nodes_from_documents(documents)
-```
-
+````
 ## 5. 索引类型
 
 ### 5.1 VectorStoreIndex（最常用）
 
-```python
+````python
 from llama_index.core import VectorStoreIndex
 
 # 内存向量索引
@@ -130,32 +122,29 @@ storage_context = StorageContext.from_defaults(vector_store=vector_store)
 index = VectorStoreIndex.from_documents(
     documents, storage_context=storage_context
 )
-```
-
+````
 ### 5.2 SummaryIndex
 
-```python
+````python
 from llama_index.core import SummaryIndex
 
 # 适合需要全文摘要的场景
 index = SummaryIndex.from_documents(documents)
 query_engine = index.as_query_engine(response_mode="tree_summarize")
-```
-
+````
 ### 5.3 KeywordTableIndex
 
-```python
+````python
 from llama_index.core import KeywordTableIndex
 
 # 基于关键词的索引，适合精确匹配
 index = KeywordTableIndex.from_documents(documents)
-```
-
+````
 ## 6. 查询引擎
 
 ### 6.1 基础查询
 
-```python
+````python
 query_engine = index.as_query_engine(
     similarity_top_k=5,          # 检索 top 5 相关文档
     response_mode="compact",     # 响应模式
@@ -164,8 +153,7 @@ query_engine = index.as_query_engine(
 response = query_engine.query("如何优化启动速度?")
 print(response)                  # 回答
 print(response.source_nodes)     # 来源文档
-```
-
+````
 ### 6.2 响应模式
 
 | 模式 | 说明 | 适用场景 |
@@ -178,7 +166,7 @@ print(response.source_nodes)     # 来源文档
 
 ### 6.3 Chat Engine（多轮对话）
 
-```python
+````python
 chat_engine = index.as_chat_engine(chat_mode="condense_plus_context")
 
 response = chat_engine.chat("这个项目用了什么技术栈?")
@@ -186,11 +174,10 @@ print(response)
 
 response = chat_engine.chat("它的性能怎么样?")  # 自动关联上下文
 print(response)
-```
-
+````
 ## 7. Agent 模式
 
-```python
+````python
 from llama_index.core.agent import ReActAgent
 from llama_index.core.tools import QueryEngineTool, FunctionTool
 
@@ -216,13 +203,12 @@ agent = ReActAgent.from_tools(
 )
 
 response = agent.chat("项目中有多少个模块?每个模块平均多少行代码?")
-```
-
+````
 ## 8. 高级特性
 
 ### 8.1 子问题查询
 
-```python
+````python
 from llama_index.core.query_engine import SubQuestionQueryEngine
 from llama_index.core.tools import QueryEngineTool
 
@@ -235,11 +221,10 @@ tools = [
 # 自动拆分复杂问题为子问题
 engine = SubQuestionQueryEngine.from_defaults(query_engine_tools=tools)
 response = engine.query("对比 Android 和后端的架构设计有什么异同?")
-```
-
+````
 ### 8.2 路由查询
 
-```python
+````python
 from llama_index.core.query_engine import RouterQueryEngine
 from llama_index.core.selectors import LLMSingleSelector
 
@@ -248,8 +233,7 @@ router_engine = RouterQueryEngine(
     selector=LLMSingleSelector.from_defaults(),
     query_engine_tools=tools
 )
-```
-
+````
 ## 9. LlamaIndex vs LangChain 选型
 
 | 场景 | 推荐 |

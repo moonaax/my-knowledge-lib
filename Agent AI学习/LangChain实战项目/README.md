@@ -16,7 +16,7 @@
 
 ## 对应学习路线
 
-```
+````
 学习阶段          实战项目                    涉及知识点
 ─────────────────────────────────────────────────────────
 第一阶段 基础      → 1. 多轮对话客户端         Model I/O、LCEL、Memory
@@ -24,4 +24,4 @@
 第三阶段 RAG      → 3. 知识库 RAG 问答        Loader、Splitter、Retriever
 第四阶段 LangGraph → 4. 多步骤 Agent          StateGraph、Multi-Agent
 第五阶段 生产化    → 5. 部署上线               LangServe、LangSmith
-```
+````

@@ -6,7 +6,7 @@ Jetpack Compose 是 Android 的**声明式 UI 框架**，用 Kotlin 代码直接
 
 **命令式（传统 View）vs 声明式（Compose）：**
 
-```kotlin
+````kotlin
 // 命令式：告诉系统"怎么做"
 textView.text = "Hello"
 textView.setTextColor(Color.RED)
@@ -20,8 +20,7 @@ fun Greeting(name: String, isVisible: Boolean) {
         Text(text = "Hello $name", color = Color.Red)
     }
 }
-```
-
+````
 声明式的核心思想：**UI = f(State)**。UI 是状态的函数，状态变了 UI 自动更新。
 
 ---
@@ -30,7 +29,7 @@ fun Greeting(name: String, isVisible: Boolean) {
 
 ### 2.1 @Composable 函数
 
-```kotlin
+````kotlin
 @Composable
 fun UserCard(user: User) {
     Card(modifier = Modifier.padding(8.dp)) {
@@ -40,15 +39,14 @@ fun UserCard(user: User) {
         }
     }
 }
-```
-
+````
 - `@Composable` 标记的函数不是普通函数，编译器会对它做特殊处理
 - 不能在普通函数中调用 @Composable 函数
 - 没有返回值（不返回 View 对象），而是"发射" UI 节点
 
 ### 2.2 State（状态）
 
-```kotlin
+````kotlin
 @Composable
 fun Counter() {
     // remember：在重组时保留值（不会被重置）
@@ -60,8 +58,7 @@ fun Counter() {
     }
     // count 变化 → Compose 检测到状态变化 → 重新执行 Counter() → UI 更新
 }
-```
-
+````
 **remember vs rememberSaveable：**
 
 | 方法 | 配置变更（旋转） | 进程被杀 |
@@ -69,16 +66,15 @@ fun Counter() {
 | `remember` | ❌ 丢失 | ❌ 丢失 |
 | `rememberSaveable` | ✅ 保留 | ✅ 保留（存入 Bundle） |
 
-```kotlin
+````kotlin
 // 旋转屏幕后还在
 var text by rememberSaveable { mutableStateOf("") }
-```
-
+````
 ### 2.3 状态提升（State Hoisting）
 
 把状态从子组件提升到父组件，子组件变成无状态的，更容易复用和测试。
 
-```kotlin
+````kotlin
 // ❌ 状态在内部，不好复用
 @Composable
 fun MyTextField() {
@@ -98,8 +94,7 @@ fun Screen() {
     var name by remember { mutableStateOf("") }
     MyTextField(value = name, onValueChange = { name = it })
 }
-```
-
+````
 ---
 
 ## 三、重组（Recomposition）
@@ -108,7 +103,7 @@ fun Screen() {
 
 当 State 变化时，Compose 会重新执行受影响的 @Composable 函数，这个过程叫**重组**。
 
-```kotlin
+````kotlin
 @Composable
 fun Screen() {
     var count by remember { mutableStateOf(0) }
@@ -121,8 +116,7 @@ fun Screen() {
         }
     }
 }
-```
-
+````
 ### 3.2 重组的特性
 
 | 特性 | 说明 |
@@ -135,7 +129,7 @@ fun Screen() {
 
 ### 3.3 避免不必要的重组
 
-```kotlin
+````kotlin
 // ❌ 每次重组都创建新的 lambda，导致子组件重组
 @Composable
 fun Parent() {
@@ -154,8 +148,7 @@ fun Parent() {
 // ✅ 使用 Stable/Immutable 注解标记数据类
 @Stable  // 告诉 Compose 这个类的实例是稳定的
 data class UiState(val name: String, val age: Int)
-```
-
+````
 ---
 
 ## 四、副作用 API（Side Effects）
@@ -166,7 +159,7 @@ Composable 函数应该是纯函数（无副作用），但实际开发中需要
 
 在 Composable 进入组合时启动协程，离开时自动取消。key 变化时重新启动。
 
-```kotlin
+````kotlin
 @Composable
 fun Screen(userId: String) {
     var user by remember { mutableStateOf<User?>(null) }
@@ -178,13 +171,12 @@ fun Screen(userId: String) {
 
     user?.let { UserCard(it) }
 }
-```
-
+````
 ### 4.2 DisposableEffect
 
 需要清理资源时使用（类似 onDestroy）。
 
-```kotlin
+````kotlin
 @Composable
 fun LifecycleAware(lifecycleOwner: LifecycleOwner) {
     DisposableEffect(lifecycleOwner) {
@@ -199,13 +191,12 @@ fun LifecycleAware(lifecycleOwner: LifecycleOwner) {
         }
     }
 }
-```
-
+````
 ### 4.3 SideEffect
 
 每次重组成功后执行，用于将 Compose 状态同步到非 Compose 代码。
 
-```kotlin
+````kotlin
 @Composable
 fun Screen(analytics: Analytics) {
     SideEffect {
@@ -213,8 +204,7 @@ fun Screen(analytics: Analytics) {
         analytics.setScreenName("HomeScreen")
     }
 }
-```
-
+````
 ### 4.4 对比
 
 | API | 触发时机 | 有协程 | 有清理 | 典型场景 |
@@ -230,7 +220,7 @@ fun Screen(analytics: Analytics) {
 
 ### 5.1 在 Compose 中使用 View
 
-```kotlin
+````kotlin
 @Composable
 fun MapScreen() {
     AndroidView(
@@ -242,11 +232,10 @@ fun MapScreen() {
         }
     )
 }
-```
-
+````
 ### 5.2 在 View 中使用 Compose
 
-```kotlin
+````kotlin
 // 在 XML 布局中
 <androidx.compose.ui.platform.ComposeView
     android:id="@+id/compose_view"
@@ -259,8 +248,7 @@ composeView.setContent {
         MyComposable()
     }
 }
-```
-
+````
 ---
 
 ## 六、Compose 的编译原理（简要）
@@ -272,7 +260,7 @@ Compose 编译器插件在编译时对 @Composable 函数做了大量转换：
 3. **插入比较逻辑**：在函数入口处比较参数是否变化，没变就跳过（智能重组）
 4. **Slot Table**：Compose 运行时用 Slot Table（Gap Buffer 数据结构）存储 UI 树的状态
 
-```kotlin
+````kotlin
 // 你写的代码
 @Composable
 fun Greeting(name: String) {
@@ -290,8 +278,7 @@ fun Greeting(name: String, $composer: Composer, $changed: Int) {
     }
     $composer.endGroup()
 }
-```
-
+````
 ---
 
 ## 七、面试题库
@@ -328,7 +315,7 @@ fun Greeting(name: String, $composer: Composer, $changed: Int) {
 
 > 通过 viewModel() 函数获取 ViewModel 实例，用 collectAsState() 将 StateFlow 转为 Compose 的 State。
 
-```kotlin
+````kotlin
 @Composable
 fun Screen(viewModel: MyViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
@@ -338,8 +325,7 @@ fun Screen(viewModel: MyViewModel = viewModel()) {
         is Error -> ErrorMessage(uiState.message)
     }
 }
-```
-
+````
 > viewModel() 内部使用 ViewModelProvider，作用域和传统方式一样。collectAsState 会在 Flow 发射新值时触发重组。
 
 ### Q9：Compose 和 View 怎么混合使用？

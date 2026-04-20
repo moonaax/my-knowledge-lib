@@ -17,22 +17,20 @@
 | `AT_MOST` | `2 << 30` | 子 View 不能超过 SpecSize | `wrap_content` |
 | `UNSPECIFIED` | `0` | 父容器不限制，子 View 想多大就多大 | ScrollView 内部、系统内部测量 |
 
-```java
+````java
 // MeasureSpec 的打包与解包
 int mode = MeasureSpec.getMode(measureSpec);   // 高 2 位
 int size = MeasureSpec.getSize(measureSpec);   // 低 30 位
 int spec = MeasureSpec.makeMeasureSpec(size, mode); // 合成
-```
-
+````
 ### 1.2 measure / layout / draw 三阶段职责
 
-```
+````
 ViewRootImpl.performTraversals()
     ├── performMeasure()   → measure 阶段：确定 View 的宽高（measuredWidth / measuredHeight）
     ├── performLayout()    → layout 阶段：确定 View 在父容器中的位置（left, top, right, bottom）
     └── performDraw()      → draw 阶段：将 View 绘制到屏幕上
-```
-
+````
 | 阶段 | 回调方法 | 产出 | 可多次调用？ |
 |------|---------|------|-------------|
 | measure | `onMeasure()` | `measuredWidth` / `measuredHeight` | 是，可能被多次测量 |
@@ -49,7 +47,7 @@ ViewRootImpl.performTraversals()
 
 `ViewRootImpl` 是连接 `WindowManager` 和 `DecorView` 的桥梁。当界面需要刷新时，`Choreographer` 在下一个 VSYNC 信号到来时回调 `doTraversal()`：
 
-```
+````
 Choreographer.doFrame()
   → ViewRootImpl.doTraversal()
     → ViewRootImpl.performTraversals()
@@ -65,8 +63,7 @@ Choreographer.doFrame()
             → draw() → drawSoftware() 或 ThreadedRenderer.draw()
               → DecorView.draw()
                 → DecorView.onDraw() + dispatchDraw()
-```
-
+````
 核心流程：先判断 `mLayoutRequested` 决定是否 measure，再 `performLayout()`，最后 `performDraw()`。三个阶段按需执行，并非每帧都走完整流程。
 
 ### 2.2 onMeasure 中 MeasureSpec 的合成规则
@@ -87,7 +84,7 @@ Choreographer.doFrame()
 
 `layout()` 方法确定 View 的四个顶点位置，坐标系以 **父容器左上角为原点**：
 
-```
+````
 父容器 (0,0)
   ┌──────────────────────┐
   │  (left, top)         │
@@ -97,9 +94,8 @@ Choreographer.doFrame()
   │      width           │
   │         (right, bottom)
   └──────────────────────┘
-```
-
-```java
+````
+````java
 // View.layout() 简化流程
 public void layout(int l, int t, int r, int b) {
     boolean changed = setFrame(l, t, r, b);  // 设置 mLeft, mTop, mRight, mBottom
@@ -107,11 +103,10 @@ public void layout(int l, int t, int r, int b) {
         onLayout(changed, l, t, r, b);   // ViewGroup 必须重写，摆放子 View
     }
 }
-```
-
+````
 对于自定义 ViewGroup，`onLayout()` 是必须重写的方法：
 
-```java
+````java
 public class SimpleVerticalLayout extends ViewGroup {
 
     public SimpleVerticalLayout(Context context) { this(context, null); }
@@ -132,8 +127,7 @@ public class SimpleVerticalLayout extends ViewGroup {
         }
     }
 }
-```
-
+````
 ### 2.4 onDraw 与硬件加速 DisplayList
 
 #### 软件绘制 vs 硬件加速
@@ -147,15 +141,14 @@ public class SimpleVerticalLayout extends ViewGroup {
 
 硬件加速下，`onDraw()` 中的 Canvas 操作会被录制为 **DisplayList**（一组 GPU 指令），由 RenderThread 异步提交给 GPU 执行：
 
-```
+````
 View.draw()
   → updateDisplayListIfDirty()
     → RenderNode.beginRecording()   // 获取 RecordingCanvas
     → onDraw(canvas)                // 录制绘制指令
     → RenderNode.endRecording()     // 生成 DisplayList
-```
-
-```java
+````
+````java
 // 自定义 View 的 onDraw 示例
 public class CircleView extends View {
 
@@ -176,21 +169,19 @@ public class CircleView extends View {
         canvas.drawCircle(cx, cy, radius, paint);
     }
 }
-```
-
+````
 ### 2.5 requestLayout vs invalidate 区别
 
 这是面试高频考点，也是日常开发中最容易混淆的两个方法：
 
-```
+````
 requestLayout()                          invalidate()
   │                                        │
   ├→ 标记 PFLAG_FORCE_LAYOUT              ├→ 标记 PFLAG_DIRTY
   ├→ 向上传递到 ViewRootImpl              ├→ 向上传递脏区域
   ├→ 触发 measure + layout + draw         ├→ 只触发 draw
   └→ 用于：尺寸/位置变化                  └→ 用于：外观变化（颜色、透明度等）
-```
-
+````
 | 方法 | 触发阶段 | 使用场景 |
 |------|---------|---------|
 | `requestLayout()` | measure → layout → draw | 尺寸或位置发生变化 |
@@ -198,7 +189,7 @@ requestLayout()                          invalidate()
 | `postInvalidateOnAnimation()` | draw（下一帧） | 动画中的连续重绘 |
 | `forceLayout()` | 标记 flag，不主动触发 | 配合父容器的 requestLayout 使用 |
 
-```java
+````java
 // 典型用法
 public void updateColor(int newColor) {
     paint.setColor(newColor);
@@ -209,9 +200,7 @@ public void updateTextSize(float newSize) {
     paint.setTextSize(newSize);
     requestLayout();       // 文字大小变了 → 尺寸可能变 → 需要重新 measure + layout
 }
-```
-
-
+````
 ---
 
 ## 三、面试题
@@ -232,7 +221,7 @@ public void updateTextSize(float newSize) {
 - `getWidth()` = `mRight - mLeft`，在 `layout()` 中 `setFrame()` 后赋值，即 **layout 阶段结束后**可用。
 
 大多数情况两者相等。不一样的场景：
-```java
+````java
 // 在 onLayout 中人为修改了坐标
 @Override
 protected void onLayout(boolean changed, int l, int t, int r, int b) {
@@ -240,8 +229,7 @@ protected void onLayout(boolean changed, int l, int t, int r, int b) {
     child.layout(0, 0, 300, getMeasuredHeight());
     // 此时 child.getMeasuredWidth() = 200, child.getWidth() = 300
 }
-```
-
+````
 ### Q3：为什么自定义 View 直接继承 View 时，wrap_content 不生效？
 
 **A**：`View.onMeasure()` 的默认实现调用 `getDefaultSize()`，其中 `AT_MOST` 和 `EXACTLY` 都返回 `specSize`（父容器给的最大值），导致 `wrap_content` 效果等同于 `match_parent`。解决方案见第四节。
@@ -266,14 +254,13 @@ protected void onLayout(boolean changed, int l, int t, int r, int b) {
 
 **A**：`View.post()` 会将 Runnable 投递到主线程 Handler 的消息队列中。如果 View 已经 attach 到 Window，Runnable 会在当前消息（包含 `performTraversals`）执行完毕后才执行，此时 measure 和 layout 已经完成。
 
-```java
+````java
 // 常见用法：在 onCreate 中获取 View 宽高
 view.post(() -> {
     int w = view.getWidth();    // 此时已经 layout 完成
     int h = view.getHeight();
 });
-```
-
+````
 如果 View 尚未 attach，`post()` 会将 Runnable 存入 `RunQueue`，在 `dispatchAttachedToWindow()` 时重新投递，同样保证在 layout 之后执行。
 
 ### Q6：硬件加速下 invalidate 的流程和软件绘制有什么不同？
@@ -297,7 +284,7 @@ view.post(() -> {
 
 **正确做法**：在 `onMeasure()` 中针对 `AT_MOST` 模式提供默认尺寸。
 
-```java
+````java
 public class TagView extends View {
 
     private String text = "";
@@ -322,11 +309,10 @@ public class TagView extends View {
         setMeasuredDimension(w, h);
     }
 }
-```
-
+````
 `resolveSize()` 是 `View` 提供的工具方法，内部逻辑：
 
-```java
+````java
 // View.resolveSize 等价逻辑
 public static int resolveSize(int desiredSize, int measureSpec) {
     int specMode = MeasureSpec.getMode(measureSpec);
@@ -337,11 +323,10 @@ public static int resolveSize(int desiredSize, int measureSpec) {
         default:                  return desiredSize;                        // UNSPECIFIED，想要多少给多少
     }
 }
-```
-
+````
 **更完整的模板**——同时处理 ViewGroup 的 `wrap_content`：
 
-```java
+````java
 public class FlowLayout extends ViewGroup {
 
     public FlowLayout(Context context) { this(context, null); }
@@ -401,8 +386,7 @@ public class FlowLayout extends ViewGroup {
     @Override public LayoutParams generateLayoutParams(AttributeSet attrs) { return new MarginLayoutParams(getContext(), attrs); }
     @Override protected LayoutParams generateDefaultLayoutParams() { return new MarginLayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT); }
 }
-```
-
+````
 ### 4.2 踩坑：多次 measure 的性能问题
 
 #### 问题根源
@@ -417,14 +401,13 @@ public class FlowLayout extends ViewGroup {
 
 嵌套层级越深，多次测量的指数效应越明显：
 
-```
+````
 层级深度 N，每层 2 次测量 → 叶子节点被测量 2^N 次
 3 层嵌套 RelativeLayout → 叶子 View 被测量 8 次！
-```
-
+````
 #### 检测方法
 
-```java
+````java
 // 在自定义 View 中统计 onMeasure 调用次数
 public class DebugView extends View {
 
@@ -442,8 +425,7 @@ public class DebugView extends View {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
     }
 }
-```
-
+````
 也可以通过 **Layout Inspector** 或 **Systrace** 中的 `measure` 标签观察耗时。
 
 #### 优化策略
@@ -458,7 +440,7 @@ public class DebugView extends View {
 
 结合以上知识点，一个规范的自定义 View 模板：
 
-```java
+````java
 public class ProgressRingView extends View {
 
     // --- 属性 ---
@@ -527,8 +509,7 @@ private static float dpToPx(float dp) {
 private static float spToPx(float sp) {
     return sp * Resources.getSystem().getDisplayMetrics().scaledDensity;
 }
-```
-
+````
 ### 4.4 小结：绘制流程 Checklist
 
 | 检查项 | 说明 |

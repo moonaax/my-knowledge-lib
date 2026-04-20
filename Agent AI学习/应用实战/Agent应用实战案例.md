@@ -12,7 +12,7 @@
 
 ### 完整实现
 
-```python
+````python
 """企业知识库问答 Agent"""
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
@@ -115,8 +115,7 @@ class KnowledgeBaseAgent:
 agent = KnowledgeBaseAgent("./company_docs")
 print(agent.chat("我们的 API 认证方式是什么?"))
 print(agent.chat("具体怎么获取 Token?"))  # 能关联上下文
-```
-
+````
 ## 案例二：代码助手 Agent
 
 ### 需求
@@ -125,7 +124,7 @@ print(agent.chat("具体怎么获取 Token?"))  # 能关联上下文
 
 ### 实现
 
-```python
+````python
 """代码助手 Agent"""
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_tool_calling_agent, AgentExecutor
@@ -221,8 +220,7 @@ result = executor.invoke({
     "input": "分析当前项目的代码结构，找出可能的性能问题"
 })
 print(result["output"])
-```
-
+````
 ## 案例三：数据分析 Agent
 
 ### 需求
@@ -231,7 +229,7 @@ print(result["output"])
 
 ### 实现
 
-```python
+````python
 """数据分析 Agent"""
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_tool_calling_agent, AgentExecutor
@@ -300,13 +298,12 @@ result = executor.invoke({
     "input": "分析各产品在不同区域的销售表现，找出表现最好和最差的组合"
 })
 print(result["output"])
-```
-
+````
 ## 案例四：Web API Agent 服务
 
 ### 使用 FastAPI 部署 Agent
 
-```python
+````python
 """Agent API 服务"""
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -346,11 +343,10 @@ async def clear_session(session_id: str):
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-```
-
+````
 ## 5. 项目结构模板
 
-```
+````
 my-agent-project/
 ├── agents/              # Agent 定义
 │   ├── __init__.py
@@ -375,11 +371,10 @@ my-agent-project/
 ├── requirements.txt
 ├── Dockerfile
 └── main.py              # 入口
-```
-
+````
 ## 6. 开发检查清单
 
-```
+````
 □ 明确 Agent 的能力边界
 □ 工具描述是否足够精确
 □ 是否有错误处理和降级方案
@@ -390,8 +385,7 @@ my-agent-project/
 □ 是否有日志和可观测性
 □ 是否做了 Prompt 注入防护
 □ 是否有用户反馈收集机制
-```
-
+````
 ---
 
 ## 面试题精选

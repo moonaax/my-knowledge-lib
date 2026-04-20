@@ -10,7 +10,7 @@
 
 ### 1.1 同心圆分层模型
 
-```
+````
 ┌─────────────────────────────────────────────┐
 │            Frameworks & Drivers              │  ← Android SDK、Retrofit、Room
 │  ┌───────────────────────────────────────┐   │
@@ -23,14 +23,13 @@
 │  │  └───────────────────────────────┘    │   │
 │  └───────────────────────────────────────┘   │
 └─────────────────────────────────────────────┘
-```
-
+````
 - **Entities**：核心业务对象与规则，纯 Java 类，不依赖任何框架
 - **Use Cases**：封装具体业务操作，编排 Entity 交互
 - **Interface Adapters**：数据格式转换层，包含 ViewModel、Mapper、Repository 实现
 - **Frameworks & Drivers**：最外层技术实现，Android SDK、Retrofit、Room 等
 
-```java
+````java
 // Entity —— 纯业务实体
 public class User {
     private String id;
@@ -51,17 +50,15 @@ public class User {
     public String getName() { return name; }
     public String getEmail() { return email; }
 }
-```
-
+````
 ### 1.2 依赖规则（The Dependency Rule）
 
 > **源码依赖只能指向内层，内层不能知道外层的任何信息。**
 
-```
+````
 Frameworks → Interface Adapters → Use Cases → Entities
                     依赖方向：始终向内 →
-```
-
+````
 内层定义接口（抽象），外层提供实现（具体）——这是**依赖反转原则（DIP）**的直接应用。
 
 ### 1.3 与传统三层架构的区别
@@ -80,7 +77,7 @@ Frameworks → Interface Adapters → Use Cases → Entities
 
 ### 2.1 Android 中的分层落地
 
-```
+````
 app/
 ├── data/           ← Frameworks + Interface Adapters 的数据部分
 │   ├── remote/     ← Retrofit 网络数据源
@@ -94,13 +91,12 @@ app/
 └── presentation/   ← Interface Adapters 的 UI 部分 + Frameworks
     ├── ui/
     └── viewmodel/
-```
-
+````
 ### 2.2 Repository 模式
 
 Repository 作为**数据访问的统一抽象**，屏蔽数据来源细节：
 
-```java
+````java
 // domain 层：定义接口
 public interface ArticleRepository {
     List<Article> getArticles(int page, int pageSize);
@@ -137,13 +133,12 @@ public class ArticleRepositoryImpl implements ArticleRepository {
         return entity != null ? mapper.entityToDomain(entity) : null;
     }
 }
-```
-
+````
 ### 2.3 UseCase 设计
 
 **一个 UseCase 只做一件事**（单一职责）：
 
-```java
+````java
 public class GetArticleListUseCase {
     private final ArticleRepository repository;
 
@@ -155,11 +150,10 @@ public class GetArticleListUseCase {
         return repository.getArticles(page, pageSize);
     }
 }
-```
-
+````
 异步场景使用 Kotlin 协程（Kotlin 特有能力）：
 
-```kotlin
+````kotlin
 abstract class SuspendUseCase<in P, out R> {
     abstract suspend operator fun invoke(param: P): Result<R>
 }
@@ -171,8 +165,7 @@ class GetArticleListUseCase(
         repository.getArticles(param.first, param.second)
     }
 }
-```
-
+````
 ### 2.4 依赖反转原则
 
 依赖反转是 Clean Architecture 运转的**基石**，参见 [[3-依赖注入]]。
@@ -181,7 +174,7 @@ class GetArticleListUseCase(
 - RepositoryImpl（外层）实现该接口
 - 通过 DI 框架在运行时绑定
 
-```java
+````java
 @Module
 @InstallIn(SingletonComponent.class)
 public abstract class RepositoryModule {
@@ -191,11 +184,10 @@ public abstract class RepositoryModule {
     @Binds @Singleton
     public abstract ArticleRepository bindArticleRepository(ArticleRepositoryImpl impl);
 }
-```
-
+````
 ### 2.5 完整项目结构示例
 
-```
+````
 news-app/
 ├── app/di/                           ← Hilt DI 模块
 ├── data/
@@ -212,8 +204,7 @@ news-app/
 └── presentation/
     ├── newslist/NewsListViewModel.java
     └── newslist/NewsListActivity.java
-```
-
+````
 数据流向：`UI → ViewModel → UseCase → Repository接口 → RepositoryImpl → DataSource → 逐层回传`
 
 ---
@@ -228,7 +219,7 @@ news-app/
 
 **答：** UseCase（内层）需要调用数据库/网络（外层）获取数据，看似违反依赖规则。解决方案是 DIP：在 domain 层定义 Repository 接口，data 层提供实现，通过 [[3-依赖注入]] 在运行时绑定。这样 domain 层的编译依赖不会指向 data 层。
 
-```java
+````java
 // domain 层定义接口
 public interface OrderRepository {
     Order getOrderById(String orderId);
@@ -244,8 +235,7 @@ public class GetOrderUseCase {
     public GetOrderUseCase(OrderRepository repository) { this.repository = repository; }
     public Order execute(String orderId) { return repository.getOrderById(orderId); }
 }
-```
-
+````
 ### Q3: 每层为什么要用不同的数据模型？
 
 **答：** 为了解耦。`NewsDto` 对应 API 的 JSON 结构，`NewsEntity` 对应数据库表（含 Room 注解），`News` 是纯业务模型，`NewsUiModel` 是 UI 展示格式。共用模型会导致 API 变化影响 UI、数据库注解污染业务模型。但对于简单项目，可以适当共用——务实比教条更重要。
@@ -258,7 +248,7 @@ public class GetOrderUseCase {
 
 **答：** 分层和依赖反转使每层可独立测试。UseCase 只依赖 Repository 接口，用 Mock 即可测试：
 
-```java
+````java
 @Test
 public void execute_withValidId_returnsUser() {
     UserRepository mock = mock(UserRepository.class);
@@ -269,8 +259,7 @@ public void execute_withValidId_returnsUser() {
 
     assertEquals("张三", result.getName());
 }
-```
-
+````
 对比传统架构：业务逻辑在 Activity 中需要 Instrumented Test，慢且不稳定。Clean Architecture 让 80% 以上逻辑可用纯 JUnit 测试。
 
 ### Q6: 多模块项目中各层如何划分模块？
@@ -283,7 +272,7 @@ public void execute_withValidId_returnsUser() {
 
 ### 4.1 过度设计的坑
 
-```java
+````java
 // ❌ 坑1：每个 CRUD 操作都建 UseCase，一个 User 产生 8 个类
 // ✅ 简单查询可合并为一个 UseCase
 
@@ -292,8 +281,7 @@ public void execute_withValidId_returnsUser() {
 
 // ❌ 坑3：为 DataSource 也在 domain 层定义接口
 // ✅ DataSource 是 data 层内部细节，domain 只需 Repository 接口
-```
-
+````
 ### 4.2 小项目是否需要 Clean Architecture？
 
 | 项目规模 | 推荐架构 | 理由 |
@@ -311,7 +299,7 @@ Clean Architecture 定义**整体系统架构**，[[1-MVC-MVP-MVVM-MVI]] 中的 
 
 **Clean Arch + MVVM**（最主流组合）：
 
-```java
+````java
 public class NewsListViewModel extends ViewModel {
     private final GetNewsListUseCase useCase;
     private final MutableLiveData<List<NewsUiModel>> newsLiveData = new MutableLiveData<>();
@@ -327,11 +315,10 @@ public class NewsListViewModel extends ViewModel {
         newsLiveData.setValue(uiModels);
     }
 }
-```
-
+````
 **Clean Arch + MVI**（StateFlow/sealed class 为 Kotlin 特有）：
 
-```kotlin
+````kotlin
 data class NewsUiState(
     val newsList: List<NewsUiModel> = emptyList(),
     val isLoading: Boolean = false,
@@ -351,8 +338,7 @@ class NewsListViewModel(private val useCase: GetNewsListUseCase) : ViewModel() {
         }
     }
 }
-```
-
+````
 ### 4.4 实战建议
 
 1. **从 Repository 模式开始**——即使不用完整 Clean Arch 也值得采用

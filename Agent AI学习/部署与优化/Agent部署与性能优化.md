@@ -4,7 +4,7 @@
 
 ### 1.1 基础架构
 
-```
+````
 ┌──────────┐     ┌──────────────┐     ┌─────────────┐
 │  Client  │────→│  API Gateway │────→│ Agent Service│
 │ (Web/App)│     │  (Nginx/ALB) │     │  (FastAPI)   │
@@ -17,11 +17,10 @@
               │(OpenAI/   │          │(Milvus/     │  │(会话缓存) │
               │ 本地模型)  │          │ Qdrant)     │  │           │
               └───────────┘          └─────────────┘  └───────────┘
-```
-
+````
 ### 1.2 Docker 部署
 
-```dockerfile
+````dockerfile
 # Dockerfile
 FROM python:3.11-slim
 
@@ -33,9 +32,8 @@ COPY . .
 
 EXPOSE 8000
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
-```
-
-```yaml
+````
+````yaml
 # docker-compose.yml
 version: '3.8'
 services:
@@ -65,13 +63,12 @@ services:
 
 volumes:
   chroma_data:
-```
-
+````
 ## 2. 性能优化
 
 ### 2.1 延迟优化
 
-```python
+````python
 # 1. 流式输出 — 减少用户感知延迟
 from fastapi.responses import StreamingResponse
 
@@ -104,11 +101,10 @@ def cached_query(question: str) -> str | None:
 def cache_result(question: str, answer: str):
     key = hashlib.md5(question.encode()).hexdigest()
     query_cache[key] = answer
-```
-
+````
 ### 2.2 Token 优化
 
-```python
+````python
 # 1. Prompt 压缩
 def compress_context(docs: list[str], max_tokens: int = 2000) -> str:
     """压缩检索到的文档，减少 Token 消耗"""
@@ -140,11 +136,10 @@ def trim_history(messages: list, max_tokens: int = 2000) -> list:
     others = [m for m in messages if m["role"] != "system"]
     trimmed = others[-6:]  # 最近 3 轮对话
     return system + trimmed
-```
-
+````
 ### 2.3 检索优化
 
-```python
+````python
 # 1. 预计算热门查询的检索结果
 hot_queries_cache = {}
 
@@ -174,13 +169,12 @@ async def tiered_retrieval(query: str):
     # 再查向量库
     results = await retriever.ainvoke(query)
     return results
-```
-
+````
 ## 3. 成本控制
 
 ### 3.1 监控 Token 使用
 
-```python
+````python
 from langchain_core.callbacks import BaseCallbackHandler
 
 class CostTracker(BaseCallbackHandler):
@@ -201,11 +195,10 @@ class CostTracker(BaseCallbackHandler):
 
 tracker = CostTracker()
 llm = ChatOpenAI(model="gpt-4o", callbacks=[tracker])
-```
-
+````
 ### 3.2 成本优化策略
 
-```
+````
 1. 模型分级
    简单任务 → gpt-4o-mini ($0.15/1M input)
    复杂任务 → gpt-4o ($2.50/1M input)
@@ -227,13 +220,12 @@ llm = ChatOpenAI(model="gpt-4o", callbacks=[tracker])
 5. 预算告警
    设置每日/每月预算上限
    超出预算自动降级到更便宜的模型
-```
-
+````
 ## 4. 可观测性
 
 ### 4.1 日志
 
-```python
+````python
 import logging
 import structlog
 
@@ -254,11 +246,10 @@ class AgentLogger(BaseCallbackHandler):
     
     def on_llm_error(self, error, **kwargs):
         logger.error("llm_error", error=str(error))
-```
-
+````
 ### 4.2 指标监控
 
-```python
+````python
 from prometheus_client import Counter, Histogram, Gauge
 
 # 定义指标
@@ -281,11 +272,10 @@ async def chat(request: ChatRequest):
             raise
         finally:
             active_sessions.dec()
-```
-
+````
 ### 4.3 LangSmith 追踪
 
-```python
+````python
 import os
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_API_KEY"] = "your-key"
@@ -297,13 +287,12 @@ os.environ["LANGCHAIN_PROJECT"] = "production-agent"
 # - 每步的输入/输出
 # - Token 使用和延迟
 # - 错误详情
-```
-
+````
 ## 5. 安全防护
 
 ### 5.1 Prompt 注入防护
 
-```python
+````python
 def sanitize_input(user_input: str) -> str:
     """清理用户输入，防止 Prompt 注入"""
     # 检测常见注入模式
@@ -321,11 +310,10 @@ def sanitize_input(user_input: str) -> str:
             return "检测到异常输入，请重新描述您的问题。"
     
     return user_input
-```
-
+````
 ### 5.2 输出过滤
 
-```python
+````python
 def filter_output(response: str) -> str:
     """过滤 Agent 输出中的敏感信息"""
     import re
@@ -334,11 +322,10 @@ def filter_output(response: str) -> str:
     # 过滤内部 URL
     response = re.sub(r'https?://internal\.[^\s]+', '[INTERNAL_URL]', response)
     return response
-```
-
+````
 ## 6. 生产环境检查清单
 
-```
+````
 部署前:
 □ 所有 API Key 使用环境变量，不硬编码
 □ 设置了请求速率限制
@@ -359,8 +346,7 @@ def filter_output(response: str) -> str:
 □ 工具调用权限控制
 □ 审计日志
 □ 定期安全审查
-```
-
+````
 ---
 
 ## 面试题精选

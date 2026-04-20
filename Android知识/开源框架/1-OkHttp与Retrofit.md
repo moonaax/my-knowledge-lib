@@ -23,13 +23,12 @@ OkHttp 是 Square 开源的高性能 HTTP 客户端，Android 4.4 起 `HttpURLCo
 | `ConnectInterceptor` | 建立/复用连接 |
 | `CallServerInterceptor` | 发送请求并读取响应 |
 
-```java
+````java
 OkHttpClient client = new OkHttpClient.Builder()
     .addInterceptor(appInterceptor)            // 应用拦截器：最先执行，只调用一次
     .addNetworkInterceptor(networkInterceptor) // 网络拦截器：连接建立后执行
     .build();
-```
-
+````
 **应用拦截器 vs 网络拦截器**：
 - 应用拦截器：不关心重定向，始终只调用一次；可短路不调用 `chain.proceed()`
 - 网络拦截器：能获取最终请求（含补全头部）；重定向时会多次调用
@@ -38,10 +37,9 @@ OkHttpClient client = new OkHttpClient.Builder()
 
 通过 `ConnectionPool` 复用连接，避免重复 TCP/TLS 握手：
 
-```java
+````java
 ConnectionPool pool = new ConnectionPool(5, 5, TimeUnit.MINUTES);
-```
-
+````
 - 使用 `Deque<RealConnection>` 存储，后台线程定期清理空闲超时连接
 - HTTP/2 支持单连接多路复用
 
@@ -49,17 +47,16 @@ ConnectionPool pool = new ConnectionPool(5, 5, TimeUnit.MINUTES);
 
 遵循 HTTP 缓存规范（`Cache-Control`、`ETag`、`Last-Modified`），由 `CacheStrategy` 决定策略：
 
-```java
+````java
 OkHttpClient client = new OkHttpClient.Builder()
     .cache(new Cache(new File(context.getCacheDir(), "http_cache"), 10L * 1024 * 1024))
     .build();
-```
-
+````
 ### 1.5 Retrofit 概述
 
 基于 OkHttp 的 RESTful 封装层，**接口 + 注解描述请求，动态代理生成实现**：
 
-```kotlin
+````kotlin
 interface ApiService {
     @GET("users/{id}")
     suspend fun getUser(@Path("id") id: String): User
@@ -70,8 +67,7 @@ val api = Retrofit.Builder()
     .addConverterFactory(GsonConverterFactory.create())
     .build()
     .create(ApiService::class.java)
-```
-
+````
 ### 1.6 动态代理
 
 `create()` 使用 [[Java 基础#动态代理]] (`Proxy.newProxyInstance`) 运行时生成接口实现，调用方法时由 `InvocationHandler.invoke()` 完成注解解析和请求构建。
@@ -95,7 +91,7 @@ val api = Retrofit.Builder()
 
 ### 2.1 OkHttp 责任链源码
 
-```java
+````java
 // RealCall.java 简化
 Response getResponseWithInterceptorChain() throws IOException {
     List<Interceptor> interceptors = new ArrayList<>();
@@ -118,13 +114,12 @@ public Response proceed(Request request) throws IOException {
     Interceptor interceptor = interceptors.get(index);
     return interceptor.intercept(next); // 当前拦截器内部调用 next.proceed()
 }
-```
-
+````
 请求从外向内传递，响应从内向外返回，如同递归调用栈。
 
 ### 2.2 Retrofit create() 动态代理
 
-```java
+````java
 // Retrofit.java 简化
 public <T> T create(final Class<T> service) {
     return (T) Proxy.newProxyInstance(
@@ -137,13 +132,12 @@ public <T> T create(final Class<T> service) {
         }
     );
 }
-```
-
+````
 `loadServiceMethod()` 流程：查 ConcurrentHashMap 缓存 → 未命中则 `ServiceMethod.parseAnnotations()` → 生成 `RequestFactory` → 查找 `CallAdapter` + `Converter` → 构建 `HttpServiceMethod`。
 
 ### 2.3 请求流程图
 
-```
+````
 ┌──────────────────────────────────────────────┐
 │                 Retrofit 层                   │
 │  ApiService.getUser("123")                   │
@@ -169,13 +163,12 @@ public <T> T create(final Class<T> service) {
 │       ▼                                      │
 │  Server Response                             │
 └──────────────────────────────────────────────┘
-```
-
+````
 ### 2.4 suspend 函数处理
 
 Retrofit 检测到 `suspend`（最后参数为 `Continuation`）时，内部通过 `suspendCancellableCoroutine` 将回调转协程：
 
-```kotlin
+````kotlin
 suspend fun <T> Call<T>.await(): T = suspendCancellableCoroutine { cont ->
     cont.invokeOnCancellation { cancel() }
     enqueue(object : Callback<T> {
@@ -188,8 +181,7 @@ suspend fun <T> Call<T>.await(): T = suspendCancellableCoroutine { cont ->
         }
     })
 }
-```
-
+````
 ---
 
 ## 三、高级用法
@@ -198,7 +190,7 @@ suspend fun <T> Call<T>.await(): T = suspendCancellableCoroutine { cont ->
 
 #### Token 注入
 
-```java
+````java
 public class AuthInterceptor implements Interceptor {
     private final Supplier<String> tokenProvider;
 
@@ -215,11 +207,10 @@ public class AuthInterceptor implements Interceptor {
         );
     }
 }
-```
-
+````
 #### Token 过期自动刷新
 
-```java
+````java
 public class TokenRefreshInterceptor implements Interceptor {
     private final TokenManager tokenManager;
 
@@ -245,11 +236,10 @@ public class TokenRefreshInterceptor implements Interceptor {
         return response;
     }
 }
-```
-
+````
 ### 3.2 自定义 Converter（自动解包）
 
-```java
+````java
 // 服务端统一格式 {"code":0, "msg":"ok", "data":{...}}
 public class UnwrapConverterFactory extends Converter.Factory {
     @Override
@@ -268,11 +258,10 @@ public class UnwrapConverterFactory extends Converter.Factory {
     }
 }
 // 添加顺序：UnwrapConverterFactory 在 GsonConverterFactory 之前
-```
-
+````
 ### 3.3 协程 + Flow 集成
 
-```kotlin
+````kotlin
 // ViewModel 中使用
 class UserViewModel(private val api: ApiService) : ViewModel() {
     private val _user = MutableStateFlow<UiState<User>>(UiState.Loading)
@@ -289,8 +278,7 @@ fun <T> apiFlow(block: suspend () -> T): Flow<UiState<T>> = flow {
     emit(UiState.Loading)
     emit(UiState.Success(block()))
 }.catch { emit(UiState.Error(it.message ?: "Unknown")) }.flowOn(Dispatchers.IO)
-```
-
+````
 ---
 
 ## 四、面试题
@@ -325,60 +313,55 @@ fun <T> apiFlow(block: suspend () -> T): Flow<UiState<T>> = flow {
 
 ### 5.1 超时配置
 
-```java
+````java
 OkHttpClient client = new OkHttpClient.Builder()
     .connectTimeout(10, TimeUnit.SECONDS)
     .readTimeout(30, TimeUnit.SECONDS)
     .writeTimeout(30, TimeUnit.SECONDS)
     .callTimeout(60, TimeUnit.SECONDS) // 覆盖整个请求生命周期
     .build();
-```
-
+````
 踩坑：`callTimeout` 含重试重定向总时间；上传大文件需加大 `writeTimeout`。
 
 ### 5.2 证书锁定
 
-```java
+````java
 OkHttpClient client = new OkHttpClient.Builder()
     .certificatePinner(new CertificatePinner.Builder()
         .add("api.example.com", "sha256/AAAA...=") // 主证书
         .add("api.example.com", "sha256/BBBB...=") // 备用证书
         .build())
     .build();
-```
-
+````
 踩坑：证书更换后公钥哈希不匹配会断网，**务必添加备用 Pin**。建议配合 [[Android 安全]] Network Security Config。
 
 ### 5.3 日志拦截器
 
-```java
+````java
 HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
 logging.setLevel(BuildConfig.DEBUG ? Level.BODY : Level.NONE);
-```
-
+````
 踩坑：`BODY` 级别会将响应体全部读入内存，大文件会 OOM；生产环境设 `NONE` 防泄露敏感数据。推荐 [[Android 调试工具#Chucker]]。
 
 ### 5.4 多 BaseUrl 方案
 
 **方案一**：多个 Retrofit 实例（简单直接）
 
-```java
+````java
 public class ApiManager {
     public static final MainApi mainApi = createRetrofit("https://api.example.com/").create(MainApi.class);
     public static final UploadApi uploadApi = createRetrofit("https://upload.example.com/").create(UploadApi.class);
 }
-```
-
+````
 **方案二**：`@Url` 注解传完整 URL
 
-```kotlin
+````kotlin
 @GET
 suspend fun getData(@Url fullUrl: String): ResponseBody
-```
-
+````
 **方案三**：拦截器动态替换（灵活）
 
-```java
+````java
 public class DynamicBaseUrlInterceptor implements Interceptor {
     @Override
     public Response intercept(Chain chain) throws IOException {
@@ -394,8 +377,7 @@ public class DynamicBaseUrlInterceptor implements Interceptor {
         return chain.proceed(request);
     }
 }
-```
-
+````
 ### 5.5 其他踩坑
 
 - **ResponseBody 只能消费一次**：`response.body?.string()` 读取后流关闭，需提前缓存

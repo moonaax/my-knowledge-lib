@@ -4,7 +4,7 @@
 
 你在 Activity 里调用 `setContentView(R.layout.activity_main)` 之后，到用户真正看到界面，中间经历了很多步骤。先看全貌：
 
-```
+````
 Activity.setContentView()
     ↓
 PhoneWindow.setContentView()
@@ -27,13 +27,12 @@ ViewRootImpl.performTraversals()
     └── performDraw()      → View 树的绘制
     ↓
 用户看到界面
-```
-
+````
 ---
 
 ## 二、View 树的结构
 
-```
+````
 DecorView (FrameLayout)
 ├── LinearLayout
 │   ├── ActionBar
@@ -43,8 +42,7 @@ DecorView (FrameLayout)
 │           │   ├── TextView
 │           │   └── Button
 │           └── ImageView
-```
-
+````
 - `DecorView` 是最顶层的 View，是一个 FrameLayout
 - `ViewRootImpl` 不是 View，它是 View 树和 WindowManager 之间的桥梁
 - 绘制从 `ViewRootImpl.performTraversals()` 开始，自顶向下遍历整棵 View 树
@@ -65,13 +63,12 @@ MeasureSpec 是一个 32 位的 int 值，高 2 位是模式（mode），低 30 
 | `AT_MOST` | 最大值，View 的大小不能超过 specSize | `wrap_content` |
 | `UNSPECIFIED` | 不限制，View 想多大就多大 | 系统内部使用（如 ScrollView 的子 View） |
 
-```java
+````java
 // MeasureSpec 的组成
 int measureSpec = MeasureSpec.makeMeasureSpec(size, mode);
 int mode = MeasureSpec.getMode(measureSpec);
 int size = MeasureSpec.getSize(measureSpec);
-```
-
+````
 ### 3.2 MeasureSpec 的确定规则
 
 子 View 的 MeasureSpec 由**父 View 的 MeasureSpec** + **子 View 的 LayoutParams** 共同决定：
@@ -84,7 +81,7 @@ int size = MeasureSpec.getSize(measureSpec);
 
 ### 3.3 测量流程
 
-```
+````
 ViewRootImpl.performMeasure()
     ↓
 DecorView.measure(widthSpec, heightSpec)
@@ -94,10 +91,9 @@ DecorView.onMeasure()  → 作为 ViewGroup，遍历子 View
 child.measure() → child.onMeasure()
     ↓
 继续递归...直到叶子节点
-```
-
+````
 **View 的 measure 流程：**
-```java
+````java
 // View.java
 public final void measure(int widthMeasureSpec, int heightMeasureSpec) {
     // measure 是 final 的，不能重写！
@@ -112,10 +108,9 @@ protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         getDefaultSize(getSuggestedMinimumHeight(), heightMeasureSpec)
     );
 }
-```
-
+````
 **自定义 View 重写 onMeasure：**
-```java
+````java
 @Override
 protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
     int widthMode = MeasureSpec.getMode(widthMeasureSpec);
@@ -133,15 +128,14 @@ protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
     // 必须调用 setMeasuredDimension，否则会抛异常
     setMeasuredDimension(width, height);
 }
-```
-
+````
 > **重要：** 如果自定义 View 不重写 onMeasure，`wrap_content` 和 `match_parent` 效果一样！因为默认实现中 AT_MOST 模式也返回 specSize（父容器大小）。
 
 ### 3.4 ViewGroup 的测量
 
 ViewGroup 需要先测量所有子 View，再根据子 View 的大小确定自己的大小。
 
-```java
+````java
 // ViewGroup 提供的辅助方法
 protected void measureChildren(int widthMeasureSpec, int heightMeasureSpec) {
     for (int i = 0; i < getChildCount(); i++) {
@@ -156,8 +150,7 @@ protected void measureChild(View child, int parentWidthSpec, int parentHeightSpe
     int childHeightSpec = getChildMeasureSpec(parentHeightSpec, padding, lp.height);
     child.measure(childWidthSpec, childHeightSpec);
 }
-```
-
+````
 ---
 
 ## 四、Layout（布局）
@@ -166,7 +159,7 @@ protected void measureChild(View child, int parentWidthSpec, int parentHeightSpe
 
 ### 4.1 布局流程
 
-```
+````
 ViewRootImpl.performLayout()
     ↓
 DecorView.layout(left, top, right, bottom)
@@ -176,9 +169,8 @@ DecorView.onLayout()  → 遍历子 View，调用 child.layout()
 child.layout() → child.onLayout()
     ↓
 继续递归...
-```
-
-```java
+````
+````java
 // View.java
 public void layout(int l, int t, int r, int b) {
     // 1. 保存旧位置
@@ -192,13 +184,12 @@ public void layout(int l, int t, int r, int b) {
         onLayout(changed, l, t, r, b);  // 回调 onLayout
     }
 }
-```
-
+````
 **View 的 onLayout：** 空实现（叶子节点不需要布局子 View）
 
 **ViewGroup 的 onLayout：** 必须重写，确定每个子 View 的位置
 
-```java
+````java
 // 自定义 ViewGroup 示例：垂直排列子 View
 @Override
 protected void onLayout(boolean changed, int l, int t, int r, int b) {
@@ -216,8 +207,7 @@ protected void onLayout(boolean changed, int l, int t, int r, int b) {
         }
     }
 }
-```
-
+````
 ### 4.2 getMeasuredWidth vs getWidth
 
 | 方法 | 含义 | 可用时机 |
@@ -226,13 +216,12 @@ protected void onLayout(boolean changed, int l, int t, int r, int b) {
 | `getWidth()` | 实际宽度（right - left） | onLayout 之后 |
 
 通常两者相等，但如果在 layout 时故意改变了位置，它们可能不同：
-```java
+````java
 // 故意让实际宽度和测量宽度不同
 child.layout(0, 0, child.getMeasuredWidth() + 100, child.getMeasuredHeight());
 // getMeasuredWidth() = 原始值
 // getWidth() = 原始值 + 100
-```
-
+````
 ---
 
 ## 五、Draw（绘制）
@@ -241,7 +230,7 @@ child.layout(0, 0, child.getMeasuredWidth() + 100, child.getMeasuredHeight());
 
 ### 5.1 绘制流程（6 步）
 
-```java
+````java
 // View.draw() 的流程
 public void draw(Canvas canvas) {
     // 1. 绘制背景
@@ -260,10 +249,9 @@ public void draw(Canvas canvas) {
 
     // 6. 绘制装饰（焦点高亮等）
 }
-```
-
+````
 **自定义 View 主要重写 `onDraw()`：**
-```java
+````java
 @Override
 protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
@@ -277,21 +265,19 @@ protected void onDraw(Canvas canvas) {
     // 画路径
     canvas.drawPath(path, paint);
 }
-```
-
+````
 **ViewGroup 的 `dispatchDraw()`：**
-```java
+````java
 // 遍历子 View，调用 child.draw()
 protected void dispatchDraw(Canvas canvas) {
     for (int i = 0; i < childCount; i++) {
         drawChild(canvas, getChildAt(i), drawingTime);
     }
 }
-```
-
+````
 ### 5.2 Canvas 和 Paint
 
-```java
+````java
 // Paint：画笔，控制颜色、粗细、样式
 Paint paint = new Paint();
 paint.setColor(Color.RED);
@@ -313,8 +299,7 @@ canvas.translate(dx, dy); // 平移
 canvas.rotate(degrees);   // 旋转
 canvas.scale(sx, sy);     // 缩放
 canvas.restore();         // 恢复到 save 时的状态
-```
-
+````
 ---
 
 ## 六、requestLayout vs invalidate vs postInvalidate
@@ -325,7 +310,7 @@ canvas.restore();         // 恢复到 save 时的状态
 | `invalidate()` | 只触发 draw | View 的内容变了（颜色、文字等），大小没变 |
 | `postInvalidate()` | 同 invalidate，但可以在子线程调用 | 子线程中需要刷新 UI |
 
-```java
+````java
 // 改变了文字颜色 → 只需要重绘
 textView.setTextColor(Color.RED);
 textView.invalidate();
@@ -333,10 +318,9 @@ textView.invalidate();
 // 改变了文字内容（可能影响大小）→ 需要重新测量
 textView.setText("longer text");
 textView.requestLayout();
-```
-
+````
 **requestLayout 的传递：**
-```
+````
 子 View.requestLayout()
     ↓ 设置 PFLAG_FORCE_LAYOUT 标记
 父 View.requestLayout()
@@ -344,8 +328,7 @@ textView.requestLayout();
 ViewRootImpl.requestLayout()
     ↓
 scheduleTraversals() → performTraversals()
-```
-
+````
 ---
 
 ## 七、硬件加速
@@ -361,14 +344,13 @@ scheduleTraversals() → performTraversals()
 
 ### 7.2 硬件加速的绘制流程
 
-```
+````
 软件绘制：
 View.draw() → Canvas（CPU）→ Bitmap → SurfaceFlinger → 屏幕
 
 硬件加速：
 View.draw() → DisplayList（记录绘制命令）→ RenderThread → GPU → SurfaceFlinger → 屏幕
-```
-
+````
 **DisplayList 的优势：**
 - 只记录绘制命令，不立即执行
 - View 内容没变时可以复用 DisplayList，不需要重新执行 onDraw
@@ -381,11 +363,10 @@ View.draw() → DisplayList（记录绘制命令）→ RenderThread → GPU → 
 - `Paint.setMaskFilter()`（BlurMaskFilter 部分支持）
 - `Canvas.drawPicture()`
 
-```java
+````java
 // 对单个 View 关闭硬件加速
 view.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-```
-
+````
 ---
 
 ## 八、VSYNC 与 Choreographer
@@ -402,7 +383,7 @@ VSYNC（Vertical Synchronization）是屏幕的垂直同步信号，通常 60Hz 
 
 Choreographer（编舞者）负责协调 VSYNC 信号和 UI 绘制。
 
-```
+````
 VSYNC 信号到来
     ↓
 Choreographer.doFrame()
@@ -410,9 +391,8 @@ Choreographer.doFrame()
     ├── 处理动画（CALLBACK_ANIMATION）
     ├── 处理 View 绘制（CALLBACK_TRAVERSAL）
     └── 处理提交（CALLBACK_COMMIT）
-```
-
-```java
+````
+````java
 // ViewRootImpl.scheduleTraversals()
 void scheduleTraversals() {
     mTraversalBarrier = mHandler.getLooper().getQueue().postSyncBarrier();
@@ -421,10 +401,9 @@ void scheduleTraversals() {
         mTraversalRunnable, null);
     // 等待下一个 VSYNC 信号到来时执行 mTraversalRunnable
 }
-```
-
+````
 **利用 Choreographer 监控帧率：**
-```java
+````java
 Choreographer.getInstance().postFrameCallback(new Choreographer.FrameCallback() {
     long lastFrameTimeNanos = 0;
 
@@ -440,8 +419,7 @@ Choreographer.getInstance().postFrameCallback(new Choreographer.FrameCallback() 
         Choreographer.getInstance().postFrameCallback(this);
     }
 });
-```
-
+````
 ---
 
 ## 九、面试题库

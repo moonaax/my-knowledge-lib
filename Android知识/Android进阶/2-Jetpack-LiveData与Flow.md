@@ -6,7 +6,7 @@
 
 LiveData 是一个**可观察的数据持有类**，具有生命周期感知能力。它只在观察者处于活跃状态（STARTED 或 RESUMED）时才通知数据变化。
 
-```java
+````java
 // ViewModel 中
 public class MyViewModel extends ViewModel {
     private final MutableLiveData<String> _name = new MutableLiveData<>();
@@ -22,8 +22,7 @@ public class MyViewModel extends ViewModel {
 viewModel.getName().observe(this, name -> {
     textView.setText(name);  // 自动在主线程回调
 });
-```
-
+````
 ### 1.2 核心特性
 
 | 特性 | 说明 |
@@ -36,7 +35,7 @@ viewModel.getName().observe(this, name -> {
 
 ### 1.3 原理
 
-```java
+````java
 // LiveData 核心源码简化
 public abstract class LiveData<T> {
     private int mVersion = -1;  // 数据版本号
@@ -66,8 +65,7 @@ public abstract class LiveData<T> {
         observer.mObserver.onChanged(mData);
     }
 }
-```
-
+````
 **关键流程：**
 1. `observe()` 时将 Observer 包装成 LifecycleBoundObserver，注册到 Lifecycle
 2. `setValue()` 时版本号 +1，遍历所有观察者，只通知活跃的
@@ -79,7 +77,7 @@ public abstract class LiveData<T> {
 
 LiveData 在新观察者注册时，会立即把最新的值发送给它。这在某些场景下是个问题：
 
-```java
+````java
 // ViewModel
 MutableLiveData<String> errorEvent = new MutableLiveData<>();
 
@@ -92,13 +90,12 @@ void doSomething() {
 // 然后跳转到 Fragment B
 // Fragment B 也观察了 errorEvent
 // 问题：Fragment B 一注册就收到了"网络错误"，又弹了一次 Toast！
-```
-
+````
 **原因：** 新观察者的 `mLastVersion = -1`，而 LiveData 的 `mVersion > -1`，所以 `considerNotify` 判断有新数据，立即通知。
 
 **解决方案：**
 
-```java
+````java
 // 方案一：SingleLiveEvent（Google 官方示例）
 public class SingleLiveEvent<T> extends MutableLiveData<T> {
     private final AtomicBoolean pending = new AtomicBoolean(false);
@@ -146,8 +143,7 @@ viewModel.errorEvent.observe(this, event -> {
 });
 
 // 方案三：用 SharedFlow（推荐，见下文）
-```
-
+````
 ### 1.5 setValue vs postValue
 
 | 方法 | 线程 | 时机 |
@@ -157,7 +153,7 @@ viewModel.errorEvent.observe(this, event -> {
 
 **postValue 的坑：** 短时间内多次调用 postValue，只有最后一次的值会被分发。
 
-```java
+````java
 // ❌ 中间的值会丢失
 liveData.postValue("A");
 liveData.postValue("B");
@@ -166,11 +162,10 @@ liveData.postValue("C");
 
 // 原因：postValue 内部用一个 pending 变量，
 // 多次调用只是更新 pending 的值，只 post 一次 Runnable
-```
-
+````
 ### 1.6 Transformations
 
-```java
+````java
 // map：转换数据类型
 LiveData<String> userName = Transformations.map(userLiveData, user ->
     user.getFirstName() + " " + user.getLastName()
@@ -185,8 +180,7 @@ LiveData<List<User>> searchResults = Transformations.switchMap(queryLiveData, qu
 MediatorLiveData<String> mediator = new MediatorLiveData<>();
 mediator.addSource(liveData1, value -> mediator.setValue("Source1: " + value));
 mediator.addSource(liveData2, value -> mediator.setValue("Source2: " + value));
-```
-
+````
 ---
 
 ## 二、Flow
@@ -195,7 +189,7 @@ mediator.addSource(liveData2, value -> mediator.setValue("Source2: " + value));
 
 Flow 是 Kotlin 协程提供的**异步数据流**，可以按顺序发射多个值（LiveData 只能持有一个值）。
 
-```kotlin
+````kotlin
 // 创建 Flow
 fun getNumbers(): Flow<Int> = flow {
     for (i in 1..5) {
@@ -210,8 +204,7 @@ lifecycleScope.launch {
         println(number)  // 1, 2, 3, 4, 5（每秒一个）
     }
 }
-```
-
+````
 ### 2.2 Flow vs LiveData
 
 | 对比项 | LiveData | Flow |
@@ -228,7 +221,7 @@ lifecycleScope.launch {
 
 StateFlow 是 Flow 的一种，类似于 LiveData，持有一个当前值，新的收集者会立即收到最新值。
 
-```kotlin
+````kotlin
 class MyViewModel : ViewModel() {
     // StateFlow 必须有初始值
     private val _uiState = MutableStateFlow(UiState.Loading)
@@ -252,8 +245,7 @@ sealed class UiState {
     data class Success(val data: List<Item>) : UiState()
     data class Error(val message: String?) : UiState()
 }
-```
-
+````
 **StateFlow vs LiveData：**
 
 | 对比项 | StateFlow | LiveData |
@@ -267,7 +259,7 @@ sealed class UiState {
 
 SharedFlow 是更灵活的热流，可以配置重放（replay）和缓冲。
 
-```kotlin
+````kotlin
 class MyViewModel : ViewModel() {
     // 一次性事件（不重放，类似 SingleLiveEvent）
     private val _events = MutableSharedFlow<UiEvent>()
@@ -290,17 +282,15 @@ lifecycleScope.launch {
         }
     }
 }
-```
-
+````
 **SharedFlow 的参数：**
-```kotlin
+````kotlin
 MutableSharedFlow<T>(
     replay = 0,           // 新收集者能收到几个历史值（0 = 不重放 = 解决粘性问题）
     extraBufferCapacity = 0,  // 额外缓冲区大小
     onBufferOverflow = BufferOverflow.SUSPEND  // 缓冲区满时的策略
 )
-```
-
+````
 | replay | 行为 | 等价于 |
 |--------|------|--------|
 | 0 | 新收集者不收到历史值 | SingleLiveEvent |
@@ -309,7 +299,7 @@ MutableSharedFlow<T>(
 
 ### 2.5 在 UI 中安全收集 Flow
 
-```kotlin
+````kotlin
 // ❌ 错误：Activity 进入后台后 Flow 还在收集，浪费资源
 lifecycleScope.launch {
     viewModel.uiState.collect { state ->
@@ -331,11 +321,10 @@ viewModel.uiState
     .flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
     .onEach { state -> updateUI(state) }
     .launchIn(lifecycleScope)
-```
-
+````
 ### 2.6 常用操作符
 
-```kotlin
+````kotlin
 // map：转换
 flow.map { it.toString() }
 
@@ -368,8 +357,7 @@ flow.collectLatest { value ->
     val result = heavyComputation(value)
     updateUI(result)
 }
-```
-
+````
 ### 2.7 冷流 vs 热流
 
 | 对比项 | 冷流（Flow） | 热流（StateFlow/SharedFlow） |
@@ -379,7 +367,7 @@ flow.collectLatest { value ->
 | 有无状态 | 无状态 | 有状态（持有当前值） |
 | 类比 | 点播视频 | 直播 |
 
-```kotlin
+````kotlin
 // 冷流：每次 collect 都重新执行
 val coldFlow = flow {
     println("开始执行")
@@ -391,19 +379,17 @@ coldFlow.collect { }  // 又打印"开始执行"
 // 热流：只执行一次，多个收集者共享
 val hotFlow = MutableStateFlow(0)
 // 收集者1 和 收集者2 收到的是同一个流的数据
-```
-
+````
 ---
 
 ## 三、实际项目中的选择
 
-```
+````
 简单 UI 状态（加载中/成功/失败）→ StateFlow
 一次性事件（Toast、导航、弹窗）→ SharedFlow(replay=0)
 简单场景 + 不想引入协程 → LiveData
 复杂数据流（搜索、多数据源合并）→ Flow + 操作符
-```
-
+````
 ---
 
 ## 四、面试题库
@@ -448,7 +434,7 @@ val hotFlow = MutableStateFlow(0)
 
 > 经典的搜索防抖实现：把 EditText 的输入转成 Flow，然后用 debounce + distinctUntilChanged + flatMapLatest 组合。debounce(300) 确保用户停止输入 300ms 后才发起搜索；distinctUntilChanged 过滤掉相同的搜索词；flatMapLatest 在新搜索词到来时取消上一次的搜索请求。
 
-```kotlin
+````kotlin
 private val _query = MutableStateFlow("")
 
 val searchResults = _query
@@ -460,6 +446,5 @@ val searchResults = _query
             .catch { emit(emptyList()) }
     }
     .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-```
-
+````
 > 这比用 Handler.postDelayed 实现的防抖更优雅，而且自动处理了取消和异常。stateIn 把冷流转成 StateFlow，避免每次 collect 都重新执行。

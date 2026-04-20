@@ -11,7 +11,7 @@
 
 在 `res/values/attrs.xml` 中通过 `<declare-styleable>` 为自定义 View 声明属性集合，编译后会在 `R.styleable` 中生成 `int[]` 数组。
 
-```xml
+````xml
 <!-- res/values/attrs.xml -->
 <resources>
     <declare-styleable name="CircleImageView">
@@ -38,8 +38,7 @@
         <attr name="civ_background" format="color|reference" />
     </declare-styleable>
 </resources>
-```
-
+````
 #### attr format 速查表
 
 | format      | 说明               | 取值方法                        |
@@ -57,28 +56,26 @@
 
 ### 1.2 enum vs flag 的本质区别
 
-```java
+````java
 // enum — 互斥，XML 中只能写一个值
 // android:layout_width="match_parent"
 
 // flag — 可用 | 组合
 // android:gravity="top|center_horizontal"
-```
-
+````
 - `enum`：编译期检查互斥，值不可组合
 - `flag`：值按位设计，运行时通过 `and` 判断
 
-```java
+````java
 int gravity = ta.getInt(R.styleable.CircleImageView_civ_gravity, 0);
 boolean isTop = (gravity & 0x01) != 0;
 boolean isCenter = (gravity & 0x10) != 0;
-```
-
+````
 ### 1.3 defStyleAttr vs defStyleRes
 
 [[View的构造函数]] 中四参数构造函数签名：
 
-```java
+````java
 public class MyView extends View {
     public MyView(Context context) { this(context, null); }
     public MyView(Context context, AttributeSet attrs) { this(context, attrs, 0); }
@@ -87,8 +84,7 @@ public class MyView extends View {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
 }
-```
-
+````
 两者的区别：
 
 | 参数           | 含义                                         | 生效条件                          |
@@ -98,7 +94,7 @@ public class MyView extends View {
 
 典型用法：
 
-```xml
+````xml
 <!-- 1. 在 attrs.xml 声明一个 attr 指向 style -->
 <attr name="myViewStyle" format="reference" />
 
@@ -112,9 +108,8 @@ public class MyView extends View {
     <item name="civ_borderWidth">2dp</item>
     <item name="civ_borderColor">#FF0000</item>
 </style>
-```
-
-```java
+````
+````java
 public class MyView extends View {
     public MyView(Context context) { this(context, null); }
     public MyView(Context context, AttributeSet attrs) { this(context, attrs, R.attr.myViewStyle); }
@@ -123,9 +118,7 @@ public class MyView extends View {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
 }
-```
-
-
+````
 ---
 
 ## 二、原理与源码
@@ -134,7 +127,7 @@ public class MyView extends View {
 
 `Context.obtainStyledAttributes()` 是属性解析的入口，最终调用 `Resources.Theme.obtainStyledAttributes()`：
 
-```java
+````java
 // android.content.res.Resources.Theme
 public TypedArray obtainStyledAttributes(
     AttributeSet set,    // XML 中写的属性
@@ -142,11 +135,10 @@ public TypedArray obtainStyledAttributes(
     int defStyleAttr,    // Theme 中的 attr 引用
     int defStyleRes      // 兜底 style 资源
 )
-```
-
+````
 **源码关键流程**（基于 AOSP API 33）：
 
-```java
+````java
 // ResourcesImpl.java -> ThemeImpl
 public TypedArray resolveAttributes(AttributeSet set, int[] attrs,
         int defStyleAttr, int defStyleRes) {
@@ -157,11 +149,10 @@ public TypedArray resolveAttributes(AttributeSet set, int[] attrs,
     // 5. 最后查找 Theme 中的默认值
     // 底层调用 native: AssetManager.applyStyle()
 }
-```
-
+````
 在 Kotlin 自定义 View 中的标准用法：
 
-```java
+````java
 // In constructor
 TypedArray ta = context.obtainStyledAttributes(
     attrs,                              // XML 属性集
@@ -181,14 +172,12 @@ int shape = ta.getInt(
 );
 
 ta.recycle(); // 必须回收！
-```
-
+````
 ### 2.2 属性优先级（从高到低）
 
-```
+````
 XML 直接设置  >  style="@style/xxx"  >  defStyleAttr(Theme attr)  >  defStyleRes  >  Theme 默认值
-```
-
+````
 用一张表说明：
 
 | 优先级 | 来源                     | 示例                                      |
@@ -201,7 +190,7 @@ XML 直接设置  >  style="@style/xxx"  >  defStyleAttr(Theme attr)  >  defStyl
 
 验证优先级的代码：
 
-```java
+````java
 // 在 XML 中同时设置直接属性和 style，观察哪个生效
 // layout.xml
 // <com.example.MyView
@@ -209,15 +198,14 @@ XML 直接设置  >  style="@style/xxx"  >  defStyleAttr(Theme attr)  >  defStyl
 //     app:civ_borderWidth="8dp" />    ← 直接设置 8dp
 //
 // 结果：borderWidth = 8dp（XML 直接设置优先）
-```
-
+````
 ### 2.3 TypedArray 的获取与回收机制
 
 #### 对象池设计
 
 `TypedArray` 采用**对象池**（Pool）复用，避免频繁创建对象：
 
-```java
+````java
 // TypedArray.java (AOSP 简化)
 public class TypedArray {
     // 同步池，默认容量 5
@@ -242,11 +230,10 @@ public class TypedArray {
         sPool.release(this);  // 归还到池中
     }
 }
-```
-
+````
 #### 回收流程图
 
-```
+````
 obtainStyledAttributes()
     ↓
 sPool.acquire()  →  池中有对象？ → 复用
@@ -260,13 +247,12 @@ sPool.acquire()  →  池中有对象？ → 复用
 ta.recycle()
     ↓
 清理数据 → sPool.release() → 归还池中
-```
-
+````
 ### 2.4 use 扩展函数（推荐写法）
 
 AndroidX 提供了 `TypedArray.use {}` 扩展，自动回收：
 
-```java
+````java
 // In constructor
 TypedArray ta = context.obtainStyledAttributes(
     attrs, R.styleable.CircleImageView, defStyleAttr, defStyleRes
@@ -282,11 +268,10 @@ try {
     ta.recycle();
 }
 // 离开 try-finally 块自动 recycle，无需手动调用
-```
-
+````
 `use` 的实现原理：
 
-```kotlin
+````kotlin
 // androidx.core.content
 inline fun <R> TypedArray.use(block: (TypedArray) -> R): R {
     return try {
@@ -295,9 +280,7 @@ inline fun <R> TypedArray.use(block: (TypedArray) -> R): R {
         recycle()
     }
 }
-```
-
-
+````
 ---
 
 ## 三、面试题
@@ -311,7 +294,7 @@ inline fun <R> TypedArray.use(block: (TypedArray) -> R): R {
 2. 在 `StrictMode` 下会抛出 `RuntimeException`
 3. 内部持有 `Resources` 引用，可能导致间接内存泄漏
 
-```java
+````java
 // StrictMode 检测代码
 StrictMode.setVmPolicy(
     new StrictMode.VmPolicy.Builder()
@@ -319,21 +302,19 @@ StrictMode.setVmPolicy(
         .penaltyLog()
         .build()
 );
-```
-
+````
 ### Q2：obtainStyledAttributes 的四个参数分别是什么？属性优先级如何？
 
 **A：**
 
-```java
+````java
 context.obtainStyledAttributes(
     set,          // 1. XML AttributeSet
     attrs,        // 2. R.styleable.XxxView 属性数组
     defStyleAttr, // 3. Theme 中的 attr 引用（间接指向 style）
     defStyleRes   // 4. 兜底 style 资源 ID
 );
-```
-
+````
 优先级从高到低：**XML 直接属性 > style 属性 > defStyleAttr > defStyleRes > Theme 默认值**。
 
 `defStyleRes` 仅在 `defStyleAttr == 0` 或 Theme 中未定义该 attr 时才生效。
@@ -349,13 +330,12 @@ context.obtainStyledAttributes(
 | 典型场景 | shape 类型选择   | gravity、文字样式组合   |
 | XML 写法 | `app:shape="circle"` | `app:gravity="top\|center"` |
 
-```java
+````java
 // flag 判断
 int flags = ta.getInt(R.styleable.Xxx_myFlag, 0);
 boolean hasTop = (flags & FLAG_TOP) != 0;
 boolean hasCenter = (flags & FLAG_CENTER) != 0;
-```
-
+````
 ### Q4：defStyleAttr 和 defStyleRes 的区别？什么时候用哪个？
 
 **A：**
@@ -365,7 +345,7 @@ boolean hasCenter = (flags & FLAG_CENTER) != 0;
 
 优先级：`defStyleAttr` > `defStyleRes`。当 `defStyleAttr` 在 Theme 中有定义时，`defStyleRes` 被忽略。
 
-```java
+````java
 // MaterialButton 的做法：
 public class MaterialButton extends AppCompatButton {
     public MaterialButton(Context context) { this(context, null); }
@@ -377,8 +357,7 @@ public class MaterialButton extends AppCompatButton {
     }
 }
 // 通过 Theme 中的 materialButtonStyle attr 控制默认样式
-```
-
+````
 ### Q5：自定义属性在 Library 模块中需要注意什么？
 
 **A：**
@@ -387,15 +366,14 @@ public class MaterialButton extends AppCompatButton {
 2. **R 类引用**：Library 中 `R.styleable` 的值不是 `final`（AGP 非 final R），不能用在 `switch-case` 中，需用 `if-else`
 3. **属性复用**：如果要复用系统属性（如 `android:text`），在 `declare-styleable` 中引用时不要加 `format`：
 
-```xml
+````xml
 <declare-styleable name="MyView">
     <!-- 复用系统属性，不加 format -->
     <attr name="android:text" />
     <!-- 自定义属性，需要 format -->
     <attr name="mv_radius" format="dimension" />
 </declare-styleable>
-```
-
+````
 4. **namespace**：Library 发布为 AAR 后，使用方用 `app:` 命名空间即可，无需关心原始包名
 
 ### Q6：TypedArray 的 getDimension()、getDimensionPixelSize()、getDimensionPixelOffset() 有什么区别？
@@ -408,7 +386,7 @@ public class MaterialButton extends AppCompatButton {
 | `getDimensionPixelSize()`  | `Int`    | 四舍五入，至少 1 | 宽高、padding    |
 | `getDimensionPixelOffset()`| `Int`    | 直接截断取整     | 偏移量           |
 
-```java
+````java
 // 10.5dp 在 2x 屏幕上：
 // getDimension()           → 21.0f
 // getDimensionPixelSize()  → 21  (四舍五入，且保证 ≥ 1)
@@ -418,9 +396,7 @@ public class MaterialButton extends AppCompatButton {
 // getDimension()           → 0.4f
 // getDimensionPixelSize()  → 1   (保证至少为 1)
 // getDimensionPixelOffset()→ 0   (截断为 0)
-```
-
-
+````
 ---
 
 ## 四、实战与踩坑
@@ -435,7 +411,7 @@ public class MaterialButton extends AppCompatButton {
 
 #### 根因分析
 
-```java
+````java
 // TypedArray.recycle() 源码
 public void recycle() {
     if (mRecycled) {
@@ -448,15 +424,14 @@ public void recycle() {
     mAssets = null;
     sPool.release(this);  // 关键：归还池
 }
-```
-
+````
 不调用 `recycle()` → 对象不归还池 → 池中可用对象减少 → 后续每次都 `new` → GC 压力增大。
 
 #### 解决方案
 
 始终使用 `use` 扩展函数，从根本上杜绝遗漏：
 
-```java
+````java
 TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.MyView);
 try {
     // 在这里读取属性
@@ -465,35 +440,32 @@ try {
     ta.recycle();
 }
 // 自动 recycle，即使发生异常也能保证回收
-```
-
+````
 #### Lint 检查
 
 Android Lint 内置了 `Recycle` 检查规则，会在未调用 `recycle()` 时发出警告：
 
-```
+````
 Warning: This TypedArray should be recycled after use with #recycle()
-```
-
+````
 ### 4.2 自定义属性命名冲突
 
 #### 场景一：两个 Library 定义了同名 attr
 
-```xml
+````xml
 <!-- library-a 的 attrs.xml -->
 <attr name="title" format="string" />
 
 <!-- library-b 的 attrs.xml -->
 <attr name="title" format="reference" />
-```
-
+````
 编译报错：`Attribute "title" has already been defined`。
 
 #### 解决方案
 
 1. **加前缀**（推荐）：所有自定义属性加模块前缀
 
-```xml
+````xml
 <declare-styleable name="LibAView">
     <attr name="liba_title" format="string" />
 </declare-styleable>
@@ -501,11 +473,10 @@ Warning: This TypedArray should be recycled after use with #recycle()
 <declare-styleable name="LibBView">
     <attr name="libb_title" format="reference" />
 </declare-styleable>
-```
-
+````
 2. **抽取公共 attr**：如果两个 Library 确实需要同一个属性，抽到公共模块
 
-```xml
+````xml
 <!-- common/attrs.xml -->
 <attr name="common_title" format="string" />
 
@@ -513,11 +484,10 @@ Warning: This TypedArray should be recycled after use with #recycle()
 <declare-styleable name="LibAView">
     <attr name="common_title" />
 </declare-styleable>
-```
-
+````
 #### 场景二：与系统属性冲突
 
-```xml
+````xml
 <!-- 错误：重新定义了 android:text 的 format -->
 <attr name="android:text" format="string" />
 
@@ -525,15 +495,14 @@ Warning: This TypedArray should be recycled after use with #recycle()
 <declare-styleable name="MyView">
     <attr name="android:text" />
 </declare-styleable>
-```
-
+````
 ### 4.3 在 Library 中使用自定义属性的注意事项
 
 #### 4.3.1 非 final R 的影响
 
 AGP 中 Library 模块的 `R` 类字段不是 `final`，因此：
 
-```java
+````java
 // ❌ 编译错误：R.styleable.MyView_xxx 不是常量，不能用于 switch
 switch (index) {
     case R.styleable.MyView_mv_color: /* ... */ break;
@@ -541,16 +510,14 @@ switch (index) {
 
 // ✅ 使用 if-else 替代
 if (index == R.styleable.MyView_mv_color) { /* ... */ }
-```
-
+````
 > 从 AGP 8.0 起可通过 `android.nonFinalResIds=false` 恢复 final R，但官方不推荐。
 
 #### 4.3.2 属性命名规范
 
-```
+````
 模块缩写_属性名
-```
-
+````
 示例：
 
 | 模块              | 前缀   | 属性示例              |
@@ -563,7 +530,7 @@ if (index == R.styleable.MyView_mv_color) { /* ... */ }
 
 一个完整的自定义 View 属性声明与解析流程：
 
-```xml
+````xml
 <!-- res/values/attrs.xml -->
 <resources>
     <attr name="progressBarStyle" format="reference" />
@@ -577,9 +544,8 @@ if (index == R.styleable.MyView_mv_color) { /* ... */ }
         <attr name="gpb_animDuration" format="integer" />
     </declare-styleable>
 </resources>
-```
-
-```xml
+````
+````xml
 <!-- res/values/styles.xml -->
 <style name="Widget.GradientProgressBar">
     <item name="gpb_progress">0</item>
@@ -594,9 +560,8 @@ if (index == R.styleable.MyView_mv_color) { /* ... */ }
 <style name="AppTheme" parent="Theme.Material3.Light">
     <item name="progressBarStyle">@style/Widget.GradientProgressBar</item>
 </style>
-```
-
-```java
+````
+````java
 public class GradientProgressBar extends View {
 
     private int progress = 0;
@@ -670,11 +635,10 @@ public class GradientProgressBar extends View {
         setProgress(value, true);
     }
 }
-```
-
+````
 XML 中使用：
 
-```xml
+````xml
 <com.example.widget.GradientProgressBar
     android:layout_width="match_parent"
     android:layout_height="8dp"
@@ -682,13 +646,12 @@ XML 中使用：
     app:gpb_startColor="#4CAF50"
     app:gpb_endColor="#8BC34A"
     app:gpb_cornerRadius="4dp" />
-```
-
+````
 ### 4.4 其他常见踩坑
 
 #### 踩坑 1：在 RecyclerView.ViewHolder 中重复解析属性
 
-```java
+````java
 // ❌ 每次 onBindViewHolder 都解析属性 — 浪费性能
 @Override
 public void onBindViewHolder(VH holder, int position) {
@@ -696,24 +659,21 @@ public void onBindViewHolder(VH holder, int position) {
 }
 
 // ✅ 属性解析应在 View 的构造函数中一次性完成
-```
-
+````
 #### 踩坑 2：recycle 后继续使用 TypedArray
 
-```java
+````java
 TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.MyView);
 ta.recycle();
 // ❌ recycle 后再读取会崩溃或返回错误值
 int color = ta.getColor(R.styleable.MyView_mv_color, 0);
-```
-
+````
 #### 踩坑 3：多类型 format 取值方式
 
-```xml
+````xml
 <attr name="mv_bg" format="color|reference" />
-```
-
-```java
+````
+````java
 // 需要先尝试 getResourceId，再 fallback 到 getColor
 TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.MyView);
 try {
@@ -727,8 +687,7 @@ try {
 } finally {
     ta.recycle();
 }
-```
-
+````
 ---
 
 ## 参考

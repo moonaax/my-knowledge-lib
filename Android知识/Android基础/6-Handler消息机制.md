@@ -6,7 +6,7 @@ Android 有一条铁律：**只有主线程（UI 线程）才能更新 UI**。
 
 但是网络请求、数据库操作这些耗时任务必须在子线程做（否则 ANR）。那子线程拿到数据后怎么更新 UI？答案就是 Handler 消息机制——它是 Android 线程间通信的核心方案。
 
-```java
+````java
 // 经典场景：子线程获取数据 → 主线程更新 UI
 Handler handler = new Handler(Looper.getMainLooper());
 
@@ -16,13 +16,12 @@ new Thread(() -> {
         textView.setText(data);  // 切回主线程更新 UI
     });
 }).start();
-```
-
+````
 ---
 
 ## 二、四大核心角色
 
-```
+````
 ┌─────────────────────────────────────────────────┐
 │                    Thread                        │
 │                                                  │
@@ -38,8 +37,7 @@ new Thread(() -> {
 │         (回调处理)     │ (循环取消息)│               │
 │                       └──────────┘               │
 └─────────────────────────────────────────────────┘
-```
-
+````
 ### 2.1 Message（消息）
 
 Message 是消息的载体，包含：
@@ -57,7 +55,7 @@ Message 是消息的载体，包含：
 
 Message 内部维护了一个**链表结构的对象池**（最大 50 个），避免频繁创建对象。
 
-```java
+````java
 // ✅ 推荐：从复用池获取
 Message msg = Message.obtain();
 // 或
@@ -65,8 +63,7 @@ Message msg = handler.obtainMessage();
 
 // ❌ 不推荐：直接 new
 Message msg = new Message();
-```
-
+````
 `obtain()` 从池中取一个复用的 Message，用完后 `recycle()` 放回池中。这是一个典型的**享元模式**。
 
 ### 2.2 MessageQueue（消息队列）
@@ -77,14 +74,13 @@ MessageQueue 并不是一个真正的队列（Queue），而是一个**按时间
 - `enqueueMessage()`：插入消息（按 when 时间排序插入链表）
 - `next()`：取出下一条消息（如果没有到期的消息，会阻塞）
 
-```
+````
 链表结构（按 when 排序）：
 head → [when=100] → [when=200] → [when=300] → null
-```
-
+````
 **next() 方法的阻塞机制：**
 
-```java
+````java
 // 简化版 next() 逻辑
 Message next() {
     for (;;) {  // 死循环
@@ -97,15 +93,14 @@ Message next() {
         }
     }
 }
-```
-
+````
 `nativePollOnce` 是 native 方法，底层用 Linux 的 **epoll 机制**实现阻塞等待，不会消耗 CPU。
 
 ### 2.3 Looper（循环器）
 
 Looper 的职责很简单：**不断从 MessageQueue 中取消息，交给对应的 Handler 处理**。
 
-```java
+````java
 // Looper.loop() 简化版
 public static void loop() {
     final Looper me = myLooper();
@@ -120,11 +115,10 @@ public static void loop() {
         msg.recycleUnchecked();  // 回收 Message
     }
 }
-```
-
+````
 **每个线程最多只有一个 Looper：**
 
-```java
+````java
 // Looper 通过 ThreadLocal 保证线程唯一
 static final ThreadLocal<Looper> sThreadLocal = new ThreadLocal<>();
 
@@ -134,13 +128,12 @@ private static void prepare() {
     }
     sThreadLocal.set(new Looper());
 }
-```
-
+````
 **主线程的 Looper 在哪里创建的？**
 
 在 `ActivityThread.main()` 中：
 
-```java
+````java
 // App 启动的入口
 public static void main(String[] args) {
     Looper.prepareMainLooper();  // 创建主线程 Looper
@@ -149,14 +142,13 @@ public static void main(String[] args) {
     Looper.loop();  // 开始循环（永远不会退出）
     throw new RuntimeException("Main thread loop unexpectedly exited");
 }
-```
-
+````
 ### 2.4 Handler（处理器）
 
 Handler 负责发送消息和处理消息。
 
 **发送消息：**
-```java
+````java
 // 发送即时消息
 handler.sendMessage(msg);
 handler.sendEmptyMessage(what);
@@ -171,11 +163,10 @@ handler.sendMessageAtTime(msg, uptimeMillis);
 // post 系列（本质是把 Runnable 包装成 Message）
 handler.post(runnable);
 handler.postDelayed(runnable, delayMillis);
-```
-
+````
 **处理消息的优先级：**
 
-```java
+````java
 public void dispatchMessage(Message msg) {
     if (msg.callback != null) {
         // 优先级1：Message 自带的 callback（post 系列）
@@ -191,15 +182,14 @@ public void dispatchMessage(Message msg) {
         handleMessage(msg);
     }
 }
-```
-
+````
 ---
 
 ## 三、ThreadLocal
 
 ThreadLocal 是实现"每个线程一个 Looper"的关键。它为每个线程维护一份独立的变量副本。
 
-```java
+````java
 // 简单理解
 ThreadLocal<String> threadLocal = new ThreadLocal<>();
 
@@ -212,22 +202,20 @@ new Thread(() -> {
     threadLocal.set("Thread B");
     System.out.println(threadLocal.get());  // "Thread B"
 }).start();
-```
-
+````
 **原理：**
 - 每个 Thread 内部有一个 `ThreadLocalMap`
 - `ThreadLocal.set(value)` → 把 value 存到当前线程的 ThreadLocalMap 中
 - `ThreadLocal.get()` → 从当前线程的 ThreadLocalMap 中取值
 - key 是 ThreadLocal 对象本身（弱引用），value 是存储的值
 
-```
+````
 Thread A 的 ThreadLocalMap:
   { ThreadLocal@123 → "Thread A" }
 
 Thread B 的 ThreadLocalMap:
   { ThreadLocal@123 → "Thread B" }
-```
-
+````
 **内存泄漏风险：**
 - key 是弱引用，ThreadLocal 对象被回收后 key 变成 null
 - 但 value 是强引用，不会被回收 → 内存泄漏
@@ -243,16 +231,15 @@ Thread B 的 ThreadLocalMap:
 
 默认情况下，所有消息都是同步消息，按顺序执行。异步消息可以"插队"——当设置了同步屏障后，同步消息会被阻塞，只有异步消息能被取出执行。
 
-```java
+````java
 // 设置异步消息
 Message msg = Message.obtain();
 msg.setAsynchronous(true);  // 标记为异步消息
 handler.sendMessage(msg);
-```
-
+````
 ### 4.2 同步屏障的工作原理
 
-```
+````
 正常情况：
 [同步1] → [同步2] → [异步1] → [同步3]
 按顺序执行：同步1 → 同步2 → 异步1 → 同步3
@@ -261,13 +248,12 @@ handler.sendMessage(msg);
 [屏障] → [同步1] → [同步2] → [异步1] → [同步3]
 跳过同步消息，只执行异步消息：异步1
 同步1、同步2、同步3 被阻塞
-```
-
+````
 ### 4.3 应用场景
 
 **View 的绘制就用了同步屏障！**
 
-```java
+````java
 // ViewRootImpl.scheduleTraversals()
 void scheduleTraversals() {
     // 1. 设置同步屏障，阻塞普通消息
@@ -288,8 +274,7 @@ void doTraversal() {
     // 4. 执行绘制
     performTraversals();
 }
-```
-
+````
 这样做的目的是：**确保 UI 绘制消息优先执行**，不会被其他消息（比如你 post 的 Runnable）延迟，保证 16ms 内完成一帧的绘制。
 
 ---
@@ -298,7 +283,7 @@ void doTraversal() {
 
 IdleHandler 是 MessageQueue 提供的一个回调接口，当消息队列**空闲时**（没有消息要处理或者下一条消息还没到时间）会被调用。
 
-```java
+````java
 Looper.myQueue().addIdleHandler(new MessageQueue.IdleHandler() {
     @Override
     public boolean queueIdle() {
@@ -310,8 +295,7 @@ Looper.myQueue().addIdleHandler(new MessageQueue.IdleHandler() {
                         // true：每次空闲都执行
     }
 });
-```
-
+````
 **使用场景：**
 - 延迟初始化（启动优化：把非必要的初始化放到空闲时执行）
 - GC 回调（ActivityThread 中用 IdleHandler 触发 GC）
@@ -334,21 +318,20 @@ Looper.myQueue().addIdleHandler(new MessageQueue.IdleHandler() {
 3. Android 的所有事件（触摸、绘制、生命周期）都是通过 Handler 消息驱动的
 4. ANR 是因为某条消息的处理时间太长，阻塞了后续消息的处理，而不是因为循环本身
 
-```
+````
 正常情况：
 loop() → 取消息 → 处理（1ms）→ 取消息 → 处理（2ms）→ 取消息 → 休眠...
 
 ANR 情况：
 loop() → 取消息 → 处理（耗时 6 秒！）→ 后面的触摸事件等不到处理 → ANR
-```
-
+````
 ---
 
 ## 七、Handler 内存泄漏
 
 ### 7.1 为什么会泄漏？
 
-```java
+````java
 // ❌ 经典泄漏写法
 public class MyActivity extends Activity {
     private Handler handler = new Handler() {
@@ -366,18 +349,16 @@ public class MyActivity extends Activity {
         }, 60000);  // 延迟 60 秒
     }
 }
-```
-
+````
 **泄漏链：**
-```
+````
 主线程 Looper → MessageQueue → Message → Handler → Activity
-```
-
+````
 Activity 关闭后，如果 MessageQueue 中还有未处理的消息引用着 Handler，而 Handler 又引用着 Activity，Activity 就无法被 GC 回收。
 
 ### 7.2 解决方案
 
-```java
+````java
 // ✅ 方案一：静态内部类 + 弱引用
 public class MyActivity extends AppCompatActivity {
 
@@ -412,15 +393,14 @@ protected void onDestroy() {
     super.onDestroy();
     handler.removeCallbacksAndMessages(null);
 }
-```
-
+````
 ---
 
 ## 八、HandlerThread
 
 HandlerThread 是一个自带 Looper 的线程，方便在子线程中使用 Handler。
 
-```java
+````java
 // 创建一个带消息循环的后台线程
 HandlerThread handlerThread = new HandlerThread("background-thread");
 handlerThread.start();
@@ -441,8 +421,7 @@ backgroundHandler.post(() -> {
 
 // 不用时退出
 handlerThread.quitSafely();
-```
-
+````
 **HandlerThread vs 普通 Thread：**
 - 普通 Thread 执行完就结束了，不能复用
 - HandlerThread 有 Looper，可以持续接收和处理消息，适合需要串行执行多个任务的场景

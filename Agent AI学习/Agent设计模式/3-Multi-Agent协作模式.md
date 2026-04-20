@@ -16,14 +16,13 @@
 
 ### 2.1 顺序流水线（Sequential Pipeline）
 
-```
+````
 Agent A → Agent B → Agent C → 最终输出
 
 适用: 任务有明确的先后顺序
 示例: 需求分析 → 代码编写 → 代码审查
-```
-
-```python
+````
+````python
 from langgraph.graph import StateGraph, END
 
 class State(TypedDict):
@@ -54,20 +53,18 @@ graph.add_edge("coder", "reviewer")
 graph.add_edge("reviewer", END)
 
 app = graph.compile()
-```
-
+````
 ### 2.2 主管模式（Supervisor）
 
-```
+````
               Supervisor（主管）
              /     |      \
         Worker1  Worker2  Worker3
 
 主管负责: 任务分配、进度协调、结果汇总
 Worker 负责: 执行具体子任务
-```
-
-```python
+````
+````python
 from langgraph.graph import StateGraph, END
 
 class SupervisorState(TypedDict):
@@ -128,17 +125,15 @@ for worker in ["researcher", "coder", "reviewer"]:
     graph.add_edge(worker, "supervisor")
 
 app = graph.compile()
-```
-
+````
 ### 2.3 辩论模式（Debate）
 
-```
+````
 Agent A (正方) ⟷ Agent B (反方) → Judge (裁判) → 结论
 
 适用: 需要多角度分析的决策问题
-```
-
-```python
+````
+````python
 def debate(topic: str, rounds: int = 3) -> str:
     pro_messages = []
     con_messages = []
@@ -170,11 +165,10 @@ def debate(topic: str, rounds: int = 3) -> str:
     """)
     
     return judge_response.content
-```
-
+````
 ### 2.4 层级模式（Hierarchical）
 
-```
+````
         CEO Agent
        /         \
   Tech Lead    PM Lead
@@ -182,11 +176,10 @@ def debate(topic: str, rounds: int = 3) -> str:
 Dev1  Dev2    Designer
 
 适用: 大型复杂项目，需要多层管理
-```
-
+````
 ### 2.5 投票/共识模式
 
-```python
+````python
 def consensus_agent(question: str, n_agents: int = 3) -> str:
     """多个 Agent 独立回答，取共识"""
     answers = []
@@ -205,35 +198,32 @@ def consensus_agent(question: str, n_agents: int = 3) -> str:
     请找出共识点和分歧点，给出最终综合答案。
     """)
     return consensus.content
-```
-
+````
 ## 3. 通信机制
 
 ### 3.1 共享状态
 
-```python
+````python
 # 所有 Agent 共享一个状态对象
 class SharedState(TypedDict):
     messages: list        # 消息历史
     artifacts: dict       # 产出物（代码、文档等）
     current_phase: str    # 当前阶段
     decisions: list       # 决策记录
-```
-
+````
 ### 3.2 消息传递
 
-```python
+````python
 # Agent 之间通过消息通信
 class Message:
     sender: str       # 发送者
     receiver: str     # 接收者（或 "all"）
     content: str      # 内容
     msg_type: str     # 类型: request/response/broadcast
-```
-
+````
 ### 3.3 黑板模式
 
-```python
+````python
 # 共享黑板，Agent 自由读写
 blackboard = {
     "requirements": None,    # 需求文档
@@ -251,13 +241,12 @@ def agent_loop(agent, blackboard):
             blackboard.update(result)
         if is_complete(blackboard):
             break
-```
-
+````
 ## 4. 设计原则
 
 ### 4.1 Agent 数量
 
-```
+````
 经验法则:
 - 2-3 个 Agent: 大多数场景足够
 - 4-6 个 Agent: 复杂项目
@@ -268,11 +257,10 @@ Agent 越多:
 ❌ 协调成本越高
 ❌ Token 消耗越大
 ❌ 调试越困难
-```
-
+````
 ### 4.2 角色定义清单
 
-```
+````
 每个 Agent 需要明确:
 □ 角色名称和职责
 □ 能力边界（能做什么，不能做什么）
@@ -280,8 +268,7 @@ Agent 越多:
 □ 输入/输出格式
 □ 与其他 Agent 的交互协议
 □ 失败时的处理策略
-```
-
+````
 ### 4.3 防止常见问题
 
 | 问题 | 解决方案 |

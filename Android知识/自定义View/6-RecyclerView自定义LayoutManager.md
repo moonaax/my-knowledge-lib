@@ -28,7 +28,7 @@
 
 [[RecyclerView]] 的高性能核心在于其精心设计的 **四级缓存机制**，由内部类 `Recycler` 管理：
 
-```
+````
 ┌─────────────────────────────────────────────────┐
 │              Recycler 缓存查找链                  │
 │                                                   │
@@ -42,27 +42,24 @@
 │    ↓ 未命中                                       │
 │  创建新 ViewHolder (onCreateViewHolder)           │
 └─────────────────────────────────────────────────┘
-```
-
+````
 #### 第一级：Scrap 缓存
 
-```java
+````java
 // RecyclerView.Recycler 源码
 ArrayList<ViewHolder> mAttachedScrap = new ArrayList<>();
 ArrayList<ViewHolder> mChangedScrap = null;
-```
-
+````
 - **mAttachedScrap**：存储当前仍 attached 到 RecyclerView 但被标记为"临时移除"的 ViewHolder。在 `onLayoutChildren()` 重新布局时，先将所有子 View detach 到 scrap，布局完成后未被使用的再移入其他缓存
 - **mChangedScrap**：存储数据已变更（`notifyItemChanged`）的 ViewHolder，需要重新 `onBindViewHolder()`
 - **特点**：不经过 `onBindViewHolder()`（mAttachedScrap），直接复用，速度最快
 
 #### 第二级：Cache 缓存（mCachedViews）
 
-```java
+````java
 ArrayList<ViewHolder> mCachedViews = new ArrayList<>();
 int mViewCacheMax = DEFAULT_CACHE_SIZE; // 默认为 2
-```
-
+````
 - 存储最近被移出屏幕的 ViewHolder，**按 position 精确匹配**
 - 默认容量为 **2**，可通过 `setItemViewCacheSize()` 修改
 - 命中时 **不需要** 重新 `onBindViewHolder()`，因为数据未变
@@ -70,20 +67,19 @@ int mViewCacheMax = DEFAULT_CACHE_SIZE; // 默认为 2
 
 #### 第三级：ViewCacheExtension
 
-```java
+````java
 public abstract class ViewCacheExtension {
     public abstract View getViewForPositionAndType(
         Recycler recycler, int position, int type
     );
 }
-```
-
+````
 - 开发者自定义的缓存层，很少使用
 - 典型场景：固定位置的广告位 View 缓存
 
 #### 第四级：RecycledViewPool
 
-```java
+````java
 public class RecycledViewPool {
     // 按 viewType 分组存储
     SparseArray<ScrapData> mScrap = new SparseArray<>();
@@ -92,8 +88,7 @@ public class RecycledViewPool {
         ArrayList<ViewHolder> mScrapHeap = new ArrayList<>(DEFAULT_MAX_SCRAP); // 默认 5
     }
 }
-```
-
+````
 - 按 **viewType** 分组存储，每种类型默认最多 **5** 个
 - 命中时 **需要** 重新 `onBindViewHolder()`，因为只匹配类型不匹配位置
 - 可以在多个 [[RecyclerView]] 之间共享（如 [[ViewPager2]] 的多个页面）
@@ -124,7 +119,7 @@ public class RecycledViewPool {
 
 `onLayoutChildren()` 是 LayoutManager 最核心的方法，[[LinearLayoutManager]] 的实现流程如下：
 
-```java
+````java
 // LinearLayoutManager.java（简化版）
 @Override
 public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State state) {
@@ -153,8 +148,7 @@ public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State 
     // 4. 回收多余的 Scrap View
     layoutForPredictiveAnimations(recycler, state, startOffset, endOffset);
 }
-```
-
+````
 **关键步骤解读**：
 
 1. **确定锚点**：找到一个参考位置（通常是第一个可见 item 或焦点 item），作为布局的起点
@@ -166,7 +160,7 @@ public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State 
 
 `fill()` 是实际填充 View 的循环方法：
 
-```java
+````java
 // LinearLayoutManager.java
 int fill(RecyclerView.Recycler recycler, LayoutState layoutState,
          RecyclerView.State state, boolean stopOnFocusable) {
@@ -187,11 +181,10 @@ int fill(RecyclerView.Recycler recycler, LayoutState layoutState,
     // 返回实际填充的像素数
     return start - layoutState.mAvailable;
 }
-```
-
+````
 `layoutChunk()` 负责单个 View 的获取、测量和布局：
 
-```java
+````java
 void layoutChunk(RecyclerView.Recycler recycler, RecyclerView.State state,
                  LayoutState layoutState, LayoutChunkResult result) {
     // 1. 从 Recycler 获取 View（核心！触发缓存查找链）
@@ -210,11 +203,10 @@ void layoutChunk(RecyclerView.Recycler recycler, RecyclerView.State state,
 
     result.mConsumed = orientationHelper.getDecoratedMeasurement(view);
 }
-```
-
+````
 **流程图**：
 
-```
+````
 onLayoutChildren()
     ├── detachAndScrapAttachedViews()  → 子 View 进入 Scrap
     └── fill()
@@ -224,13 +216,12 @@ onLayoutChildren()
                    ├── addView()                       → 添加到 RecyclerView
                    ├── measureChildWithMargins()       → 测量
                    └── layoutDecoratedWithMargins()    → 布局
-```
-
+````
 ### 2.3 Recycler.getViewForPosition 缓存查找链
 
 这是缓存机制的核心入口，完整查找链如下：
 
-```java
+````java
 // RecyclerView.Recycler（简化版）
 ViewHolder tryGetViewHolderForPositionByDeadline(int position, boolean dryRun, long deadlineNs) {
     ViewHolder holder = null;
@@ -278,8 +269,7 @@ ViewHolder tryGetViewHolderForPositionByDeadline(int position, boolean dryRun, l
 
     return holder;
 }
-```
-
+````
 **各级缓存是否需要 bind 的对比**：
 
 | 缓存级别 | 匹配方式 | 需要 onBind? | 需要 onCreate? |
@@ -310,7 +300,7 @@ ViewHolder tryGetViewHolderForPositionByDeadline(int position, boolean dryRun, l
 
 ### 3.2 完整实现
 
-```java
+````java
 /**
  * 流式布局 LayoutManager
  * 子 View 从左到右排列，超出宽度自动换行，支持垂直滚动
@@ -447,16 +437,14 @@ public class FlowLayoutManager extends RecyclerView.LayoutManager {
 
     private int getVerticalSpace() { return getHeight() - getPaddingTop() - getPaddingBottom(); }
 }
-```
-
+````
 ### 3.3 使用方式
 
-```java
+````java
 RecyclerView recyclerView = findViewById(R.id.recyclerView);
 recyclerView.setLayoutManager(new FlowLayoutManager());
 recyclerView.setAdapter(new TagAdapter(tagList)); // 自定义 Adapter
-```
-
+````
 ### 3.4 优化方向
 
 上面的实现是一个可工作的基础版本，生产环境中还需考虑：
@@ -468,7 +456,7 @@ recyclerView.setAdapter(new TagAdapter(tagList)); // 自定义 Adapter
 
 增量回收优化的核心思路：
 
-```java
+````java
 @Override
 public int scrollVerticallyBy(int dy, RecyclerView.Recycler recycler, RecyclerView.State state) {
     // ... 计算 realDy ...
@@ -490,10 +478,7 @@ public int scrollVerticallyBy(int dy, RecyclerView.Recycler recycler, RecyclerVi
 
     return realDy;
 }
-```
-
-
-
+````
 ---
 
 ## 四、面试题
@@ -557,7 +542,7 @@ public int scrollVerticallyBy(int dy, RecyclerView.Recycler recycler, RecyclerVi
 
 **共享方式**：
 
-```java
+````java
 // 创建共享 Pool
 RecyclerView.RecycledViewPool sharedPool = new RecyclerView.RecycledViewPool();
 sharedPool.setMaxRecycledViews(VIEW_TYPE_ITEM, 20); // 可调整容量
@@ -565,8 +550,7 @@ sharedPool.setMaxRecycledViews(VIEW_TYPE_ITEM, 20); // 可调整容量
 // 多个 RecyclerView 设置同一个 Pool
 recyclerView1.setRecycledViewPool(sharedPool);
 recyclerView2.setRecycledViewPool(sharedPool);
-```
-
+````
 共享 Pool 可以减少 `onCreateViewHolder()` 的调用次数，提升嵌套列表的滑动流畅度。
 
 ### Q6：为什么 RecyclerView 的 Item 动画比 ListView 好？
@@ -599,7 +583,7 @@ recyclerView2.setRecycledViewPool(sharedPool);
 
 [[DiffUtil]] 通过 Myers 差分算法计算新旧列表的最小变更集，自动调用精确的 `notifyItemXxx()` 方法：
 
-```java
+````java
 public class TagDiffCallback extends DiffUtil.Callback {
 
     private final List<Tag> oldList;
@@ -628,11 +612,10 @@ public class TagDiffCallback extends DiffUtil.Callback {
 DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new TagDiffCallback(oldList, newList));
 adapter.updateData(newList);
 diffResult.dispatchUpdatesTo(adapter);
-```
-
+````
 更推荐使用 `ListAdapter`（内置异步 DiffUtil）：
 
-```java
+````java
 public class TagAdapter extends ListAdapter<Tag, TagViewHolder> {
 
     private static final DiffUtil.ItemCallback<Tag> TAG_DIFF_CALLBACK = new DiffUtil.ItemCallback<Tag>() {
@@ -657,8 +640,7 @@ public class TagAdapter extends ListAdapter<Tag, TagViewHolder> {
 
 // 更新数据只需一行
 adapter.submitList(newList);
-```
-
+````
 ### 5.2 RecyclerView 嵌套性能优化
 
 嵌套 RecyclerView（如外层垂直列表 + 内层水平列表）是常见场景，但容易出现性能问题。
@@ -669,7 +651,7 @@ adapter.submitList(newList);
 
 **解决**：
 
-```java
+````java
 // 在 ViewHolder 中初始化，而不是在 onBind 中
 public class OuterViewHolder extends RecyclerView.ViewHolder {
     public final RecyclerView innerRecyclerView;
@@ -691,8 +673,7 @@ public class OuterViewHolder extends RecyclerView.ViewHolder {
 public void onBindViewHolder(OuterViewHolder holder, int position) {
     ((InnerAdapter) holder.innerRecyclerView.getAdapter()).submitList(data.get(position).getItems());
 }
-```
-
+````
 #### 坑 2：滑动冲突
 
 **问题**：内外层 RecyclerView 滑动方向相同时，手势冲突。
@@ -703,10 +684,9 @@ public void onBindViewHolder(OuterViewHolder holder, int position) {
 
 [[LinearLayoutManager]] 默认开启了 **预取（Prefetch）** 机制，在滚动时提前在 RenderThread 空闲期创建即将可见的 ViewHolder。对于嵌套场景，设置内层的预取 item 数：
 
-```java
+````java
 ((LinearLayoutManager) innerRecyclerView.getLayoutManager()).setInitialPrefetchItemCount(4);
-```
-
+````
 ### 5.3 ItemDecoration 踩坑
 
 [[ItemDecoration]] 用于给 item 添加装饰（分割线、间距、背景等），常见问题：
@@ -715,7 +695,7 @@ public void onBindViewHolder(OuterViewHolder holder, int position) {
 
 `getItemOffsets()` 返回的 Rect 会被加到 item 的测量尺寸中。自定义 LayoutManager 中调用 `getDecoratedMeasuredWidth()` 得到的是 **item 宽度 + 左右 offset**，而不是 item 本身的宽度。
 
-```java
+````java
 // 自定义 ItemDecoration
 public class SpaceDecoration extends RecyclerView.ItemDecoration {
     private final int space;
@@ -727,11 +707,10 @@ public class SpaceDecoration extends RecyclerView.ItemDecoration {
         outRect.set(space, space, space, space);
     }
 }
-```
-
+````
 在自定义 LayoutManager 中，使用 `getDecoratedXxx` 系列方法来获取包含 decoration 的尺寸：
 
-```java
+````java
 // ✅ 正确：包含 ItemDecoration 的尺寸
 int width = getDecoratedMeasuredWidth(view);
 int height = getDecoratedMeasuredHeight(view);
@@ -739,14 +718,13 @@ int height = getDecoratedMeasuredHeight(view);
 // ❌ 错误：不包含 ItemDecoration
 int width2 = view.getMeasuredWidth();
 int height2 = view.getMeasuredHeight();
-```
-
+````
 #### 坑 2：onDraw vs onDrawOver
 
 - `onDraw()`：在 item 之前绘制（item 会覆盖在上面）→ 适合绘制背景
 - `onDrawOver()`：在 item 之后绘制（覆盖在 item 上面）→ 适合绘制悬浮效果（如吸顶分组头）
 
-```java
+````java
 public class StickyHeaderDecoration extends RecyclerView.ItemDecoration {
     // 绘制在 item 上层，实现吸顶效果
     @Override
@@ -757,13 +735,12 @@ public class StickyHeaderDecoration extends RecyclerView.ItemDecoration {
         // 绘制当前分组的 header...
     }
 }
-```
-
+````
 #### 坑 3：多个 ItemDecoration 叠加
 
 RecyclerView 支持添加多个 ItemDecoration，它们的 `getItemOffsets` 会 **累加**，`onDraw` / `onDrawOver` 会按添加顺序依次调用。注意不要重复添加：
 
-```java
+````java
 // ❌ 错误：在 onBindViewHolder 或 onResume 中重复添加
 recyclerView.addItemDecoration(new SpaceDecoration(8));
 
@@ -771,8 +748,7 @@ recyclerView.addItemDecoration(new SpaceDecoration(8));
 if (recyclerView.getItemDecorationCount() == 0) {
     recyclerView.addItemDecoration(new SpaceDecoration(8));
 }
-```
-
+````
 ---
 
 ## 参考

@@ -32,21 +32,20 @@
 
 #### @Route — 标记路由目标
 
-```java
+````java
 @Route(path = "/order/detail", group = "order", name = "订单详情页")
 public class OrderDetailActivity extends AppCompatActivity { }
 
 @Route(path = "/account/service")
 public class AccountServiceImpl implements IAccountService { }
-```
-
+````
 - `path`：必填，以 `/` 开头且至少两级（`/group/name`）
 - `group`：可选，默认取 path 第一段
 - `name`：可选，用于生成路由文档
 
 #### @Interceptor — 标记拦截器
 
-```java
+````java
 @Interceptor(priority = 5, name = "登录拦截器")
 public class LoginInterceptor implements IInterceptor {
     @Override
@@ -61,13 +60,12 @@ public class LoginInterceptor implements IInterceptor {
         }
     }
 }
-```
-
+````
 - `priority`：数值越小越先执行
 
 #### @Autowired — 自动注入参数
 
-```java
+````java
 @Route(path = "/order/detail")
 public class OrderDetailActivity extends AppCompatActivity {
     @Autowired
@@ -82,8 +80,7 @@ public class OrderDetailActivity extends AppCompatActivity {
         ARouter.getInstance().inject(this); // 触发注入
     }
 }
-```
-
+````
 编译时生成 `XXX$$ARouter$$Autowired` 辅助类，运行时通过 `inject()` 调用，无反射开销。
 
 ---
@@ -94,7 +91,7 @@ public class OrderDetailActivity extends AppCompatActivity {
 
 ARouter 使用 [[5-注解处理器APT与KSP]] 在编译期扫描 `@Route` 注解，为每个模块生成路由注册类：
 
-```java
+````java
 // 自动生成 — 分组路由表
 public class ARouter$$Group$$order implements IRouteGroup {
     @Override
@@ -112,11 +109,10 @@ public class ARouter$$Root$$order implements IRouteRoot {
         routes.put("order", ARouter$$Group$$order.class);
     }
 }
-```
-
+````
 初始化流程：
 
-```
+````
 ARouter.init(application)
   └─ LogisticsCenter.init()
        ├─ 扫描 dex 找到 com.alibaba.android.arouter.routes 包下所有类
@@ -124,13 +120,12 @@ ARouter.init(application)
        ├─ IRouteRoot → Warehouse.groupsIndex
        ├─ IInterceptorGroup → Warehouse.interceptorsIndex
        └─ IProviderGroup → Warehouse.providersIndex
-```
-
+````
 ### 2.2 分组懒加载机制
 
 ARouter 不会在初始化时加载所有路由，而是 **按组懒加载**：
 
-```java
+````java
 // LogisticsCenter.completion() 简化源码
 public synchronized static void completion(Postcard postcard) {
     RouteMeta routeMeta = Warehouse.routes.get(postcard.getPath());
@@ -151,13 +146,12 @@ public synchronized static void completion(Postcard postcard) {
         // ...填充 Postcard
     }
 }
-```
-
+````
 100 个路由分 10 组，初始化只加载 10 个索引，首次访问某组时才加载该组全部路由。
 
 ### 2.3 拦截器责任链源码
 
-```java
+````java
 // InterceptorServiceImpl.java 简化
 @Route(path = "/arouter/service/interceptor")
 public class InterceptorServiceImpl implements InterceptorService {
@@ -200,13 +194,12 @@ public class InterceptorServiceImpl implements InterceptorService {
         }
     }
 }
-```
-
+````
 关键点：拦截器在子线程执行，`CancelableCountDownLatch` 实现超时控制（默认 300s），`onInterrupt()` 可中断整条链。
 
 ### 2.4 IProvider 服务发现源码
 
-```java
+````java
 // LogisticsCenter.completion() 中对 PROVIDER 类型的处理
 case PROVIDER:
     Class<? extends IProvider> providerClass =
@@ -221,8 +214,7 @@ case PROVIDER:
     postcard.setProvider(instance);
     postcard.greenChannel(); // Provider 默认跳过拦截器
     break;
-```
-
+````
 `IProvider` 实例默认单例缓存，且自动走绿色通道（跳过拦截器）。
 
 ---
@@ -231,7 +223,7 @@ case PROVIDER:
 
 ### 3.1 基础配置
 
-```groovy
+````groovy
 // 各模块 build.gradle
 dependencies {
     implementation 'com.alibaba:arouter-api:1.5.2'
@@ -247,9 +239,8 @@ android {
         }
     }
 }
-```
-
-```java
+````
+````java
 // Application 初始化
 public class App extends Application {
     @Override
@@ -262,11 +253,10 @@ public class App extends Application {
         ARouter.init(this);
     }
 }
-```
-
+````
 ### 3.2 页面跳转与参数传递
 
-```java
+````java
 // 基础跳转
 ARouter.getInstance().build("/order/detail").navigation();
 
@@ -288,22 +278,20 @@ ARouter.getInstance().build("/order/detail").navigation(this, new NavigationCall
     @Override public void onArrival(Postcard postcard) { }
     @Override public void onInterrupt(Postcard postcard) { }
 });
-```
-
+````
 ### 3.3 获取 Fragment
 
-```java
+````java
 Fragment fragment = (Fragment) ARouter.getInstance()
     .build("/order/list_fragment")
     .withString("type", "pending")
     .navigation();
 getSupportFragmentManager().beginTransaction()
     .replace(R.id.container, fragment).commit();
-```
-
+````
 ### 3.4 跨模块服务调用
 
-```java
+````java
 // Step 1: 公共模块定义接口
 public interface IAccountService extends IProvider {
     boolean isLogin();
@@ -327,11 +315,10 @@ if (service.isLogin()) {
 // 也可通过字段注入
 @Autowired
 IAccountService accountService;
-```
-
+````
 ### 3.5 拦截器实战
 
-```java
+````java
 @Interceptor(priority = 5, name = "登录拦截器")
 public class LoginInterceptor implements IInterceptor {
     @Override
@@ -356,11 +343,10 @@ public class LoginInterceptor implements IInterceptor {
 // 路由声明时标记需要登录
 @Route(path = "/order/create", extras = RouteExtra.LOGIN_REQUIRED)
 public class CreateOrderActivity extends AppCompatActivity { }
-```
-
+````
 ### 3.6 全局降级
 
-```java
+````java
 @Route(path = "/service/degrade")
 public class DegradeServiceImpl implements DegradeService {
     @Override
@@ -371,8 +357,7 @@ public class DegradeServiceImpl implements DegradeService {
     }
     @Override public void init(Context context) { }
 }
-```
-
+````
 ---
 
 ## 四、面试题
@@ -437,18 +422,16 @@ public class DegradeServiceImpl implements DegradeService {
 
 核心变更：
 
-```java
+````java
 // 注解：@Route(path = "/order/detail") → @Route(path = "therouter://order/detail")
 // 跳转：ARouter.getInstance().build("/x").navigation() → TheRouter.build("therouter://x").navigation()
 // 服务：IProvider + @Route → @ServiceProvider，获取用 TheRouter.get(IXService.class)
-```
-
-```groovy
+````
+````groovy
 // 依赖替换
 // arouter-api → cn.therouter:router:1.2.2
 // arouter-compiler → cn.therouter:apt:1.2.2（或 ksp）
-```
-
+````
 迁移步骤：引入 TheRouter → 新页面用 TheRouter → 两框架短期共存 → 逐步替换旧模块 → 移除 ARouter。
 
 ### 5.4 常见踩坑

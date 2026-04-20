@@ -21,7 +21,7 @@ BroadcastReceiver 是 Android 的"广播系统"，类似于一个全局的事件
 | **本地广播（Local）** | 只在 App 内部传播，更安全更高效（已废弃，推荐 LiveData/Flow） |
 | **粘性广播（Sticky）** | 发送后一直存在，新注册的接收器也能收到（已废弃） |
 
-```java
+````java
 // 发送普通广播
 Intent intent = new Intent("com.example.MY_ACTION");
 intent.putExtra("data", "hello");
@@ -29,30 +29,27 @@ sendBroadcast(intent);
 
 // 发送有序广播
 sendOrderedBroadcast(intent, null);
-```
-
+````
 ### 1.3 注册方式
 
 **静态注册（AndroidManifest）：**
-```xml
+````xml
 <receiver android:name=".MyReceiver"
     android:exported="false">
     <intent-filter>
         <action android:name="com.example.MY_ACTION" />
     </intent-filter>
 </receiver>
-```
-
+````
 **动态注册（代码中）：**
-```java
+````java
 MyReceiver receiver = new MyReceiver();
 IntentFilter filter = new IntentFilter("com.example.MY_ACTION");
 registerReceiver(receiver, filter);
 
 // 不用时必须注销，否则内存泄漏
 unregisterReceiver(receiver);
-```
-
+````
 **两种方式的区别：**
 
 | 对比项 | 静态注册 | 动态注册 |
@@ -71,7 +68,7 @@ unregisterReceiver(receiver);
 
 ### 1.5 BroadcastReceiver 的 onReceive
 
-```java
+````java
 public class MyReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -87,8 +84,7 @@ public class MyReceiver extends BroadcastReceiver {
         }).start();
     }
 }
-```
-
+````
 ---
 
 ## 二、ContentProvider（内容提供者）
@@ -102,17 +98,16 @@ ContentProvider 是 Android 四大组件中最特殊的一个，它的作用是*
 ### 2.2 核心概念
 
 **URI（统一资源标识符）：**
-```
+````
 content://com.example.provider/users/1
   │          │                  │     │
   │          │                  │     └── ID（可选，指定某条记录）
   │          │                  └── 表名/路径
   │          └── authority（唯一标识，通常是包名+provider）
   └── scheme（固定为 content://）
-```
-
+````
 **CRUD 操作：**
-```java
+````java
 // 查询通讯录
 Cursor cursor = getContentResolver().query(
     ContactsContract.Contacts.CONTENT_URI,  // URI
@@ -133,11 +128,10 @@ getContentResolver().update(uri, values, "id=?", new String[]{"1"});
 
 // 删除
 getContentResolver().delete(uri, "id=?", new String[]{"1"});
-```
-
+````
 ### 2.3 自定义 ContentProvider
 
-```java
+````java
 public class MyProvider extends ContentProvider {
     public static final Uri CONTENT_URI =
         Uri.parse("content://com.example.provider/users");
@@ -185,17 +179,15 @@ public class MyProvider extends ContentProvider {
         return "vnd.android.cursor.dir/vnd.com.example.users";
     }
 }
-```
-
-```xml
+````
+````xml
 <!-- AndroidManifest.xml -->
 <provider
     android:name=".MyProvider"
     android:authorities="com.example.provider"
     android:exported="true"
     android:permission="com.example.READ_DATA" />
-```
-
+````
 ### 2.4 ContentProvider 的特点
 
 - **跨进程通信**：底层基于 Binder 机制，天然支持跨进程
@@ -203,7 +195,7 @@ public class MyProvider extends ContentProvider {
 - **权限控制**：可以设置读写权限，精确控制数据访问
 - **数据变化通知**：通过 `ContentObserver` 监听数据变化
 
-```java
+````java
 // 监听数据变化
 getContentResolver().registerContentObserver(
     MyProvider.CONTENT_URI,
@@ -215,20 +207,18 @@ getContentResolver().registerContentObserver(
         }
     }
 );
-```
-
+````
 ### 2.5 ContentProvider 的启动时机
 
 **ContentProvider 在 Application.onCreate() 之前初始化！**
 
-```
+````
 Application.attachBaseContext()
     ↓
 ContentProvider.onCreate()  ← 先于 Application.onCreate
     ↓
 Application.onCreate()
-```
-
+````
 这个特性被很多库利用来做**无侵入初始化**（比如 Firebase、LeakCanary），在 ContentProvider 的 onCreate 中完成 SDK 初始化，App 开发者不需要手动调用 init。
 
 但这也是一个**性能隐患**：太多 ContentProvider 会拖慢 App 启动速度。Jetpack 的 `App Startup` 库就是为了解决这个问题，用一个 ContentProvider 统一管理多个库的初始化。
