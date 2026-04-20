@@ -2,6 +2,8 @@
 
 记录基于 LangChain + DeepSeek 的实战项目开发进度。
 
+> GitHub：https://github.com/moonaax/langchain-project
+
 ## 项目列表
 
 | # | 项目 | 状态 | 说明 |

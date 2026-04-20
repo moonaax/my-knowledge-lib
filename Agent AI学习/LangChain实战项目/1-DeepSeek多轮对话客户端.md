@@ -1,6 +1,6 @@
 # DeepSeek 多轮对话客户端
 
-> 状态：✅ 已完成 | 日期：2026-04-20 | 代码：`~/lib/langchain-deepseek-chat/`
+> 状态：✅ 已完成 | 日期：2026-04-20 | 代码：`~/lib/langchain-deepseek-chat/` | GitHub：https://github.com/moonaax/langchain-project
 
 ## 项目目标
 
