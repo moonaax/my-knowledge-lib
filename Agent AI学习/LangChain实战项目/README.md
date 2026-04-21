@@ -9,7 +9,7 @@
 | # | 项目 | 状态 | 说明 |
 |---|------|------|------|
 | 1 | [[1-DeepSeek多轮对话客户端]] | ✅ 已完成 | 终端版 + Electron 桌面客户端（深浅主题） |
-| 2 | 添加工具调用（Agent） | 🔲 待开始 | @tool、AgentExecutor |
+| 2 | [[2-工具调用Agent]] | ✅ 已完成 | @tool、create_tool_calling_agent、AgentExecutor、astream_events |
 | 3 | 知识库 RAG 问答 | 🔲 待开始 | 基于本知识库的 RAG 系统 |
 | 4 | LangGraph 多步骤 Agent | 🔲 待开始 | StateGraph、循环、自纠错 |
 | 5 | 生产化部署 | 🔲 待开始 | LangServe API、LangSmith |
