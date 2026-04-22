@@ -23,11 +23,11 @@ Android 高级开发完整知识体系，涵盖 10 个模块、57 篇文档。
 
 ### 🤖 [Agent AI 学习](Agent%20AI学习/)
 
-AI Agent 开发学习知识体系，涵盖 8 个模块、16 篇文档。
+AI Agent 开发学习知识体系，涵盖 8 个模块、17 篇文档。
 
 | 模块 | 核心内容 |
 |------|---------|
-| 基础概念 | AI Agent 概念、LLM 基础、Prompt Engineering |
+| 基础概念 | AI Agent 概念、LLM 基础、Prompt Engineering、Harness Engineering |
 | 框架与工具 | LangChain、LlamaIndex、AutoGen/CrewAI |
 | RAG检索增强生成 | RAG 原理与架构、向量数据库、优化策略 |
 | Agent设计模式 | ReAct、Plan-and-Execute、Multi-Agent 协作 |
