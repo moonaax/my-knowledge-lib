@@ -6,13 +6,15 @@
 
 ## 项目列表
 
-| # | 项目 | 状态 | 说明 |
-|---|------|------|------|
-| 1 | [[1-DeepSeek多轮对话客户端]] | ✅ 已完成 | 终端版 + Electron 桌面客户端（深浅主题） |
-| 2 | [[2-项目知识点分析\|工具调用 Agent]] | ✅ 已完成 | @tool、create_tool_calling_agent、AgentExecutor、astream_events |
-| 3 | [[2-项目知识点分析\|知识库 RAG 问答]] | ✅ 已完成 | DirectoryLoader、TextSplitter、FAISS、HuggingFace Embedding、RAG Tool |
-| 4 | [[2-项目知识点分析\|LangGraph 多步骤 Agent]] | 🟡 进行中 | StateGraph、ToolNode、条件路由（自纠错待实现） |
-| 5 | 生产化部署 | 🔲 待开始 | LangServe API、LangSmith |
+| # | 项目 | 状态 | 知识点文档 |
+|---|------|------|-----------|
+| 1 | [[1-DeepSeek多轮对话客户端]] | ✅ 已完成 | [[第一阶段-多轮对话客户端]] |
+| 2 | 工具调用 Agent | ✅ 已完成 | [[第二阶段-工具调用Agent]] |
+| 3 | 知识库 RAG 问答 | ✅ 已完成 | [[第三阶段-知识库RAG问答]] |
+| 4 | LangGraph 多步骤 Agent | 🟡 进行中 | [[第四阶段-LangGraph]] |
+| 5 | 生产化部署 | 🔲 待开始 | [[第五阶段-生产化部署]] |
+
+> 进度总览：[[进度总览]]
 
 ## 对应学习路线
 
