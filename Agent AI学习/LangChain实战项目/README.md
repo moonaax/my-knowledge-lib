@@ -9,9 +9,9 @@
 | # | 项目 | 状态 | 说明 |
 |---|------|------|------|
 | 1 | [[1-DeepSeek多轮对话客户端]] | ✅ 已完成 | 终端版 + Electron 桌面客户端（深浅主题） |
-| 2 | [[2-工具调用Agent]] | ✅ 已完成 | @tool、create_tool_calling_agent、AgentExecutor、astream_events |
-| 3 | [[3-知识库RAG问答]] | ✅ 已完成 | DirectoryLoader、TextSplitter、FAISS、HuggingFace Embedding、RAG Tool |
-| 4 | LangGraph 多步骤 Agent | 🔲 待开始 | StateGraph、循环、自纠错 |
+| 2 | [[2-项目知识点分析\|工具调用 Agent]] | ✅ 已完成 | @tool、create_tool_calling_agent、AgentExecutor、astream_events |
+| 3 | [[2-项目知识点分析\|知识库 RAG 问答]] | ✅ 已完成 | DirectoryLoader、TextSplitter、FAISS、HuggingFace Embedding、RAG Tool |
+| 4 | [[2-项目知识点分析\|LangGraph 多步骤 Agent]] | 🟡 进行中 | StateGraph、ToolNode、条件路由（自纠错待实现） |
 | 5 | 生产化部署 | 🔲 待开始 | LangServe API、LangSmith |
 
 ## 对应学习路线
