@@ -289,16 +289,135 @@ data: [DONE]         → 流结束
 | 运行时选择模式 | 对比体验 — 同一工具集，不同执行引擎 |
 | `llm.bind_tools(tools)` + `ToolNode(tools)` | LangGraph 工具集成 — 比 AgentExecutor 更显式 |
 
-## 六、当前架构
+## 六、自纠错循环（进阶）
+
+> 🔑 工具调用失败时，不是把错误丢给 LLM 碰运气，而是主动注入纠错提示，引导 LLM 换策略重试。
+
+### 6.1 为什么需要自纠错
+
+基础 ReAct 图的问题：工具调用失败后，LLM 收到的只是一条原始错误信息，可能：
+- 重复调用同样的工具（死循环）
+- 直接放弃回答（"抱歉我无法回答"）
+- 不理解错误原因（参数格式错误但不知道怎么改）
+
+自纠错的核心：**在工具失败和 LLM 之间插入一个"纠错节点"，把错误信息转化为结构化的重试提示。**
+
+### 6.2 扩展 State
+
+```python
+# 默认 MessagesState 只有 messages 字段
+# 自纠错需要额外追踪重试次数和错误信息
+class AgentState(TypedDict):
+    messages: Annotated[list[BaseMessage], add]  # 消息历史（追加模式）
+    retry_count: int                               # 当前重试次数（覆盖模式）
+    last_error: str                                # 上次工具失败的错误信息
+```
+
+### 6.3 corrector 节点
+
+```python
+MAX_RETRIES = 3
+
+def corrector_node(state: AgentState) -> dict:
+    """自纠错：分析失败原因，注入提示引导 LLM 换策略"""
+    last_error = state["messages"][-1].content
+    retry_count = state.get("retry_count", 0) + 1
+
+    correction_prompt = f"""⚠️ 工具调用失败（第 {retry_count} 次重试）：
+{last_error}
+
+请分析失败原因并换一种方式尝试：
+- 如果是参数错误，请修正参数后重试
+- 如果是工具选择错误，请换一个更合适的工具
+- 如果所有工具都无法解决，请直接用你的知识回答，并说明工具不可用"""
+
+    return {
+        "messages": [SystemMessage(content=correction_prompt)],
+        "retry_count": retry_count,
+        "last_error": last_error,
+    }
+```
+
+### 6.4 条件路由（工具执行后）
+
+```python
+def check_tool_result(state: AgentState) -> str:
+    """工具执行后路由：失败 → corrector，成功 → agent"""
+    last_msg = state["messages"][-1]
+    content = last_msg.content if hasattr(last_msg, "content") else ""
+    retry_count = state.get("retry_count", 0)
+    is_error = any(kw in content for kw in ["错误", "error", "未找到", "失败", "无法"])
+    if is_error and retry_count < MAX_RETRIES:
+        return "corrector"
+    return "agent"
+```
+
+### 6.5 自纠错图结构
 
 ````
-第四阶段架构：
-  AgentExecutor 模式: create_tool_calling_agent → AgentExecutor → astream_events
-  LangGraph 模式:     StateGraph(agent → tools → agent) → astream_events
-  两种模式共存，共享 tools.py 工具定义
+START → agent(LLM推理) ──有 tool_calls──→ tools ──失败──→ corrector → agent（纠错循环）
+                                             │
+                                             └──成功──→ agent（正常循环）
+                                             
+                                         无 tool_calls → END
 ````
 
-## 七、踩坑记录
+### 6.6 重试策略对比
+
+| 策略 | 实现 | 优点 | 缺点 |
+|------|------|------|------|
+| 无自纠错 | tools → agent | 简单 | 可能死循环或放弃 |
+| 固定重试 | 重试 N 次 | 可控 | 不分析原因 |
+| **纠错提示** | corrector 节点 | LLM 理解失败原因，主动换策略 | 额外一次 LLM 调用 |
+| 人类介入 | interrupt_before | 最可靠 | 需要人工参与 |
+
+### 6.7 前端适配
+
+服务端新增 `tool_retry` SSE 事件，前端需要处理：
+
+| 改动 | 说明 |
+|------|------|
+| `ContentBlock` 类型 | 新增 `{ type: 'tool_retry'; message: string }` |
+| `parseSSEEvent` | 解析 `event: tool_retry` 事件 |
+| `RetryCard` 组件 | 橙色毛玻璃卡片，显示"自纠错重试"提示 |
+| 状态栏 | 显示 "LangGraph + 自纠错" |
+| 模式切换按钮 | 文案更新为 "🔗 LangGraph + 自纠错" |
+
+````tsx
+// RetryCard 组件（橙色毛玻璃风格，与 ToolCard 一致）
+function RetryCard({ block, v }) {
+  return (
+    <div style={{
+      background: 'rgba(249,115,22,0.06)',
+      border: '1px solid rgba(249,115,22,0.2)',
+      borderRadius: 10, padding: '8px 12px',
+      backdropFilter: 'blur(20px)',
+    }}>
+      <span>🔄</span>
+      <span style={{ fontWeight: 600, color: '#f97316' }}>自纠错重试</span>
+      <span>{block.message}</span>
+    </div>
+  );
+}
+````
+
+## 七、当前架构
+
+````
+第四阶段架构（全链路）：
+  后端:
+    AgentExecutor 模式: create_tool_calling_agent → AgentExecutor → astream_events
+    LangGraph 模式:     StateGraph(agent → tools → corrector → agent) → astream_events
+    两种模式共存，共享 tools.py 工具定义
+    自纠错: 工具失败时路由到 corrector 节点，注入纠错提示后重试（最多 3 次）
+
+  前端:
+    SSE 事件: tool_start / tool_end / tool_retry / token / done
+    UI 组件: ToolCard（工具调用卡片）/ RetryCard（自纠错提示卡片）
+    模式切换: ⚡ Agent ↔ 🔗 LangGraph + 自纠错
+````
+
+## 八、踩坑记录
 
 1. **ToolMessage is not JSON serializable**：LangGraph 的 `astream_events` 在 `on_tool_end` 事件中，`output` 字段是 `ToolMessage` 对象而非字符串，`json.dumps` 无法序列化。解决：`str(output)` 转换后再序列化
 2. **HuggingFace 连接超时**：LangGraph 模式下调用 `knowledge_search` 工具时，`HuggingFaceEmbeddings` 尝试联网检查更新导致超时。解决：启动时加 `HF_ENDPOINT=https://hf-mirror.com HF_HUB_OFFLINE=1` 环境变量
