@@ -289,6 +289,41 @@ def eval_one(question, expected_keywords, source_file):
 
 **解决**：设置环境变量 `HF_HUB_OFFLINE=1`，使用本地缓存。
 
+### 4.4 不完整的 tool_calls 导致 400 错误
+
+**错误**：`openai.BadRequestError: An assistant message with 'tool_calls' must be followed by tool messages responding to each 'tool_call_id'`
+
+**原因**：graph 中途崩溃或被中断时，checkpointer 保存的状态可能包含一个 `AIMessage` 带有 `tool_calls`，但后面没有对应的 `ToolMessage`。下次用户发消息时，LangGraph 从 checkpointer 加载这个不完整的状态，LLM API 拒绝请求。
+
+**场景复现**：
+1. 用户发消息 → LLM 返回 tool_calls → 工具执行中服务崩溃
+2. checkpointer 保存了 `[HumanMessage, AIMessage(tool_calls)]`，没有 ToolMessage
+3. 重启后用户发新消息 → LangGraph 加载旧状态 + 新 HumanMessage → agent 节点调 LLM → 400
+
+**解决**：在 `graph_agent_node` 中调用 LLM 前，用 `_clean_tool_calls` 过滤不完整的消息：
+
+````python
+def _clean_tool_calls(messages):
+    """过滤没有对应 ToolMessage 的 AIMessage tool_calls"""
+    from langchain_core.messages import AIMessage, ToolMessage
+
+    responded_ids = set()
+    for msg in messages:
+        if isinstance(msg, ToolMessage):
+            responded_ids.add(msg.tool_call_id)
+
+    cleaned = []
+    for msg in messages:
+        if isinstance(msg, AIMessage) and hasattr(msg, "tool_calls") and msg.tool_calls:
+            missing = [tc for tc in msg.tool_calls if tc["id"] not in responded_ids]
+            if missing:
+                continue  # 跳过不完整的 tool_calls
+        cleaned.append(msg)
+    return cleaned
+````
+
+> 🔑 **通用原则**：使用 checkpointer 持久化状态时，必须考虑状态不完整的情况。任何可能中断的流程都应该在恢复时做状态校验。
+
 ---
 
 ## 五、面试要点
@@ -315,7 +350,7 @@ def eval_one(question, expected_keywords, source_file):
 
 | 文件 | 改动 |
 |------|------|
-| `server.py` | MemorySaver → AsyncSqliteSaver，延迟编译，await delete_thread |
+| `server.py` | MemorySaver → AsyncSqliteSaver，延迟编译，await delete_thread，_clean_tool_calls 修复 400 |
 | `graph_agent.py` | MemorySaver → SqliteSaver（同步版） |
 | `tools.py` | 新增 BM25 检索 + RRF 融合 |
 | `build_index.py` | 新增 jieba 分词 + bm25_corpus.json 保存 |
