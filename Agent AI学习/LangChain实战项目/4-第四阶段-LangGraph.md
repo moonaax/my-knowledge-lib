@@ -401,23 +401,112 @@ function RetryCard({ block, v }) {
 }
 ````
 
-## 七、当前架构
+## 七、Plan-and-Execute（先规划再执行）
+
+> 🔑 ReAct 是"走一步看一步"，Plan-and-Execute 是"先想好再动手"。适合复杂多步骤任务。
+
+### 7.1 为什么需要 Plan-and-Execute
+
+ReAct 模式的问题：对于复杂任务（如"帮我查北京和上海的天气，然后比较哪个城市更适合出行"），LLM 可能：
+- 遗漏某个步骤（只查了北京没查上海）
+- 步骤顺序不合理（先比较再查询）
+- 无法回溯调整（发现遗漏后不知道怎么补）
+
+Plan-and-Execute 的核心：**先让 LLM 制定完整计划，再逐步执行，执行过程中可动态调整。**
+
+### 7.2 与 ReAct 的对比
+
+| 维度 | ReAct | Plan-and-Execute |
+|------|-------|------------------|
+| 执行策略 | 走一步看一步 | 先规划再执行 |
+| 适用场景 | 简单问答、单步任务 | 复杂多步骤任务 |
+| 状态管理 | messages | messages + plan + past_steps + response |
+| 图结构 | agent ↔ tools 循环 | planner → executor → replanner 循环 |
+| 可控性 | 低（全靠 LLM 自主决策） | 高（计划可见、可调整） |
+
+### 7.3 State 设计
+
+```python
+class PlanExecuteState(TypedDict):
+    messages: Annotated[list[BaseMessage], add]  # 消息历史
+    plan: list[str]                                # 计划步骤列表
+    current_step: int                              # 当前执行到第几步
+    past_steps: list[dict]                         # 已执行步骤 [{step, result}]
+    response: str                                  # 最终回答（非空时表示完成）
+```
+
+### 7.4 三个核心节点
+
+**Planner（规划节点）**：
+```python
+def planner_node(state: PlanExecuteState) -> dict:
+    # 用 LLM 把用户问题拆解为步骤列表
+    # 输出格式：["步骤1: xxx", "步骤2: xxx", ...]
+    response = llm.invoke([SystemMessage(content=PLANNER_PROMPT), ...])
+    plan = json.loads(response.content)
+    return {"plan": plan, "current_step": 0, "past_steps": [], "response": ""}
+```
+
+**Executor（执行节点）**：
+```python
+def executor_node(state: PlanExecuteState) -> dict:
+    # 执行当前步骤，支持工具调用
+    current_step = state["plan"][state["current_step"]]
+    response = llm_with_tools.invoke([SystemMessage(content=prompt), ...])
+    # 如果 LLM 要求调用工具，执行工具并获取结果
+    if response.tool_calls:
+        result = execute_tools(response.tool_calls)
+    return {"past_steps": [...], "current_step": current_idx + 1}
+```
+
+**Re-planner（重新规划节点）**：
+```python
+def replanner_node(state: PlanExecuteState) -> dict:
+    # 根据已执行结果，决定下一步
+    # 三种走向：continue（继续）/ replan（调整计划）/ finish（输出最终回答）
+    decision = json.loads(response.content)
+    if decision["action"] == "finish":
+        return {"response": decision["response"]}
+    elif decision["action"] == "replan":
+        return {"plan": decision["new_plan"], "current_step": 0}
+    return {}  # continue
+```
+
+### 7.5 图结构
+
+````
+START → planner(规划) → executor(执行) → replanner(评估) ──继续──→ executor（循环）
+                                            │
+                                            └──完成──→ finish(输出回答) → END
+````
+
+### 7.6 前端适配
+
+| 组件 | 说明 |
+|------|------|
+| `PlanCard` | 显示计划步骤列表，带执行进度（✅ 完成 / ▶️ 当前 / ○ 待执行） |
+| `PlanStepCard` | 显示某个步骤的执行结果 |
+| `plan_start` SSE 事件 | 规划完成时推送计划步骤列表 |
+| `plan_step` SSE 事件 | 某个步骤执行完成时推送结果 |
+| 模式切换 | 三档循环：⚡ Agent → 🔗 LangGraph → 📋 Plan |
+
+## 八、当前架构
 
 ````
 第四阶段架构（全链路）：
-  后端:
+  后端（三种模式共存）：
     AgentExecutor 模式: create_tool_calling_agent → AgentExecutor → astream_events
     LangGraph 模式:     StateGraph(agent → tools → corrector → agent) → astream_events
-    两种模式共存，共享 tools.py 工具定义
-    自纠错: 工具失败时路由到 corrector 节点，注入纠错提示后重试（最多 3 次）
+    Plan-and-Execute:   StateGraph(planner → executor → replanner) → astream_events
+    三种模式共享 tools.py 工具定义
 
-  前端:
-    SSE 事件: tool_start / tool_end / tool_retry / token / done
-    UI 组件: ToolCard（工具调用卡片）/ RetryCard（自纠错提示卡片）
-    模式切换: ⚡ Agent ↔ 🔗 LangGraph + 自纠错
+  前端：
+    SSE 事件: tool_start / tool_end / tool_retry / plan_start / plan_step / token / done
+    UI 组件: ToolCard / RetryCard / PlanCard / PlanStepCard
+    模式切换: ⚡ Agent ↔ 🔗 LangGraph + 自纠错 ↔ 📋 Plan-and-Execute
 ````
 
-## 八、踩坑记录
+## 九、踩坑记录
 
 1. **ToolMessage is not JSON serializable**：LangGraph 的 `astream_events` 在 `on_tool_end` 事件中，`output` 字段是 `ToolMessage` 对象而非字符串，`json.dumps` 无法序列化。解决：`str(output)` 转换后再序列化
 2. **HuggingFace 连接超时**：LangGraph 模式下调用 `knowledge_search` 工具时，`HuggingFaceEmbeddings` 尝试联网检查更新导致超时。解决：启动时加 `HF_ENDPOINT=https://hf-mirror.com HF_HUB_OFFLINE=1` 环境变量
