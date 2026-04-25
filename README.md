@@ -6,14 +6,14 @@
 
 ### 📱 [Android 知识](Android知识/)
 
-Android 高级开发完整知识体系，涵盖 10 个模块、57 篇文档。
+Android 高级开发完整知识体系，涵盖 10 个模块、61 篇文档。
 
 | 模块 | 核心内容 |
 |------|---------|
 | Android基础 | Activity、Fragment、Service、Handler、事件分发、View绘制 |
 | Android进阶 | Compose、Jetpack 系列、插件化热修复、APT/KSP |
 | 性能优化 | 启动、内存、卡顿、包体积、电量、网络 |
-| 自定义View | 绘制流程、Canvas/Paint、动画、事件冲突 |
+| 自定义View | 绘制流程、Canvas/Paint/Path、复合组件、ViewGroup、Drawable、动画 |
 | 组件化 | 架构拆分、组件通信、资源隔离、生命周期 |
 | 跨进程通信 | Binder、AIDL、Messenger、ContentProvider |
 | Gradle与构建 | 生命周期/Task、Transform/ASM、Plugin、依赖管理 |

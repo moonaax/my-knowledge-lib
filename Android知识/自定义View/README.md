@@ -5,3 +5,7 @@
 - [[2-Canvas-bindPaint-bindPath实战|Canvas / Paint / Path 实战]]
 - [[4-动画-属性动画-插值器-估值器|动画（属性动画、插值器、估值器）]]
 - [[6-RecyclerView自定义LayoutManager|RecyclerView 自定义 LayoutManager]]
+- [[7-复合组件与自定义组合控件]]
+- [[8-自定义ViewGroup布局|自定义 ViewGroup 布局（FlowLayout / CircleLayout）]]
+- [[9-Paint进阶与特效|Paint 进阶（Xfermode / ColorFilter / 文字特效）]]
+- [[10-自定义Drawable与图形系统|自定义 Drawable 与图形系统]]
