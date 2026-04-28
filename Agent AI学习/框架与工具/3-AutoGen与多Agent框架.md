@@ -8,10 +8,12 @@
 
 | 框架 | 厂商 | 核心特点 | 适用场景 |
 |------|------|---------|---------|
-| AutoGen | 微软 | 对话驱动的多 Agent | 复杂推理、代码生成 |
+| AutoGen | 微软 | 对话驱动的多 Agent（0.7.4 异步重构） | 复杂推理、代码生成 |
 | CrewAI | 开源社区 | 角色扮演式协作 | 业务流程自动化 |
 | LangGraph | LangChain | 有状态图编排 | 精细控制的 Agent 流程 |
 | MetaGPT | 开源社区 | 软件公司模拟 | 软件开发全流程 |
+| AgentScope | 阿里达摩院 | 消息驱动 + 分布式部署 | 大规模生产级多 Agent 系统 |
+| CAMEL | 开源社区 | 角色扮演 + Inception Prompting | 双 Agent 深度协作 |
 
 ## 2. AutoGen
 
@@ -112,6 +114,50 @@ user_proxy.initiate_chat(
 > - `max_round=15` — 群聊最多 15 轮，防止无限对话导致成本失控
 > - `speaker_selection_method="auto"` — 让 LLM 根据对话上下文自动选择下一个发言者，也可以设为 `"round_robin"`（轮流）或自定义函数
 > - `GroupChatManager` — 群聊的"主持人"，负责协调发言顺序和终止条件
+
+### 2.5 AutoGen 0.7.4 架构重构
+
+> 🔑 **0.7.4 是 AutoGen 的一次重大架构升级**，从类继承设计转向组合式架构，核心变化有三点：异步优先、包拆分、Team 替代 GroupChatManager。
+
+**包拆分**：框架被拆为两个核心模块：
+- `autogen-core`：底层基础，封装 LLM 交互、消息传递等核心功能
+- `autogen-agentchat`：上层高级接口，简化多 Agent 应用开发
+
+**异步优先**：全面转向 `async/await`，多 Agent 并发调用 LLM 时不再阻塞线程，显著提升资源利用率。
+
+**Team 替代 GroupChatManager**：新版本引入 `RoundRobinGroupChat` 等 Team 概念，流程更清晰：
+
+```python
+from autogen_agentchat.teams import RoundRobinGroupChat
+from autogen_agentchat.conditions import TextMentionTermination
+
+team = RoundRobinGroupChat(
+    participants=[product_manager, engineer, reviewer, user_proxy],
+    termination_condition=TextMentionTermination("TERMINATE"),
+    max_turns=20,
+)
+
+# 异步执行
+result = await team.run_stream(task="开发一个 Web 应用")
+```
+
+**非 OpenAI 模型配置**（如 DeepSeek）需要额外传入 `model_info` 字典声明模型能力：
+
+```python
+from autogen_ext.models.openai import OpenAIChatCompletionClient
+
+client = OpenAIChatCompletionClient(
+    model="deepseek-chat",
+    api_key="your-key",
+    base_url="https://api.deepseek.com/v1",
+    model_info={
+        "function_calling": True, "max_tokens": 4096,
+        "context_length": 32768, "vision": False,
+        "json_output": True, "family": "deepseek",
+        "structured_output": True,
+    }
+)
+```
 
 ## 3. CrewAI
 
@@ -247,11 +293,93 @@ async def main():
 > - `company.invest(investment=10.0)` — 设置 API 调用预算（美元），防止成本失控
 > - `company.run(n_round=5)` — 运行 5 轮迭代，每轮各角色按顺序交付自己的产出
 
-## 5. 多 Agent 设计原则
+## 5. AgentScope — 消息驱动的工程化平台
+
+> 🔑 **AgentScope 由阿里达摩院开发**，核心理念是"消息驱动 + 工程化优先"，专为大规模、高可靠性的多 Agent 生产环境设计。
+
+### 5.1 消息驱动架构
+
+所有 Agent 交互都抽象为消息的发送和接收，而非函数调用。核心组件是 **MsgHub（消息中心）**，负责消息路由、持久化和分布式通信：
+
+```python
+from agentscope.message import Msg
+
+message = Msg(
+    name="Alice", content="Hello, Bob!",
+    role="user",
+    metadata={"timestamp": "2024-01-15T10:30:00Z"}
+)
+```
+
+消息驱动的优势：异步解耦（发送方无需等待）、位置透明（本地/远程 Agent 统一通信）、可观测性（每条消息可追踪）、可靠性（消息可持久化和重试）。
+
+### 5.2 分布式部署
+
+AgentScope 的标志性特性——Agent 可部署在不同进程或服务器上，MsgHub 通过 RPC 自动处理跨节点通信，对开发者完全透明。
+
+### 5.3 Pydantic 结构化输出
+
+通过 Pydantic BaseModel 约束 Agent 输出格式，实现游戏规则等业务逻辑的自动化校验：
+
+```python
+from pydantic import BaseModel, Field
+from typing import Optional
+
+class AgentDecision(BaseModel):
+    action: str = Field(description="执行的动作")
+    confidence: int = Field(description="信心程度 1-10", ge=1, le=10)
+    reason: Optional[str] = Field(description="决策理由", default=None)
+```
+
+### 5.4 适用场景
+
+- 大规模并发的多 Agent 系统（如实时游戏、多人协作）
+- 需要分布式部署和容错恢复的生产环境
+- 对可观测性和消息追踪有高要求的场景
+
+## 6. CAMEL — 角色扮演式自主协作
+
+> 🔑 **CAMEL 的核心是"角色扮演 + Inception Prompting"**，通过精心设计的初始提示，让两个 Agent 在最少人类干预下自主协作完成任务。
+
+### 6.1 AI User / AI Assistant 配对模式
+
+CAMEL 最初设计为双 Agent 协作：一个扮演 **AI User**（提出需求、下达指令），另一个扮演 **AI Assistant**（执行操作、提供方案）。两者角色互补，协作完成单方无法独立完成的任务。
+
+例如"开发股票分析工具"：AI User 是资深交易员（懂策略不懂编程），AI Assistant 是 Python 程序员（懂编程不懂交易）。
+
+### 6.2 Inception Prompting（引导性提示）
+
+对话开始前注入给两个 Agent 的结构化初始指令，包含：明确自身角色、告知协作者角色、定义共同目标、设定行为约束和沟通协议。这确保对话不偏离主题、不陷入无效循环。
+
+```python
+from camel.societies import RolePlaying
+
+session = RolePlaying(
+    assistant_role_name="Python程序员",
+    user_role_name="股票交易员",
+    task_prompt="开发一个股票交易策略分析工具",
+    model=model,
+)
+
+input_msg = session.init_chat()
+while n < chat_turn_limit:
+    assistant_response, user_response = session.step(input_msg)
+    if "<CAMEL_TASK_DONE>" in user_response.msg.content:
+        break
+    input_msg = assistant_response.msg
+```
+
+### 6.3 适用场景
+
+- 双 Agent 深度协作（如科研写作、创意生成、跨领域知识整合）
+- 需要"轻架构、重提示"的快速原型验证
+- 任务本身适合拆分为"需求方 + 执行方"的场景
+
+## 7. 多 Agent 设计原则
 
 > **本节是方法论：** 前面介绍了具体框架，这里讲的是不管用哪个框架都适用的设计原则。多 Agent 系统最常见的问题不是技术实现，而是角色设计不合理、协作流程不清晰。
 
-### 5.1 角色设计
+### 7.1 角色设计
 
 ````
 好的角色设计:
@@ -264,7 +392,7 @@ async def main():
 ❌ 角色职责重叠
 ❌ 没有明确的协作流程
 ````
-### 5.2 协作模式
+### 7.2 协作模式
 
 > **选择协作模式的关键：** 根据任务特点选择——有先后依赖用顺序模式，需要统一协调用层级模式，需要多角度分析用辩论模式，需要高可靠性用投票模式。实际项目中也可以混合使用。
 
@@ -285,7 +413,7 @@ async def main():
    [Agent1, Agent2, Agent3] → 多数决
    适合: 需要可靠性的场景
 ````
-### 5.3 常见陷阱
+### 7.3 常见陷阱
 
 > **多 Agent 系统的"坑"比单 Agent 多得多：** 多个 Agent 交互会产生组合爆炸的复杂性——无限对话、角色混乱、成本失控都是高频问题。下面这张表是实践中总结的经验。
 
@@ -296,24 +424,26 @@ async def main():
 | 成本失控 | 监控 Token 使用，设置预算上限 |
 | 结果不一致 | 加入 Review Agent 做质量把关 |
 
-## 6. 框架选型建议
+## 8. 框架选型建议
 
 > **选型核心原则：** 不要为了用多 Agent 而用多 Agent。先评估任务是否真的需要多个角色协作——如果一个 Agent + 几个工具就能搞定，就不要引入多 Agent 的复杂性。只有当任务确实需要不同视角、不同专长的角色协作时，才考虑多 Agent 框架。
 
 ````
-简单的双 Agent 对话     → AutoGen
-角色明确的团队协作       → CrewAI
-需要精细流程控制         → LangGraph
-模拟软件开发流程         → MetaGPT
-生产环境部署            → LangGraph（最成熟）
-快速原型验证            → CrewAI（最简单）
+简单的双 Agent 对话       → AutoGen
+角色明确的团队协作         → CrewAI
+需要精细流程控制           → LangGraph
+模拟软件开发流程           → MetaGPT
+大规模生产级 + 分布式      → AgentScope
+双 Agent 深度协作/创意任务  → CAMEL
+生产环境部署              → LangGraph（最成熟）/ AgentScope（高并发）
+快速原型验证              → CrewAI（最简单）/ CAMEL（最轻量）
 ````
 ---
 
 ## 面试题精选
 
-### Q1: AutoGen、CrewAI、LangGraph 三个多 Agent 框架怎么选？
-**答：** AutoGen 适合对话驱动的复杂推理和代码生成；CrewAI 最简单，适合角色明确的团队协作和快速原型；LangGraph 最成熟，适合需要精细流程控制的生产环境。快速验证选 CrewAI，生产部署选 LangGraph。
+### Q1: 主流多 Agent 框架怎么选？
+**答：** AutoGen 适合对话驱动的复杂推理和代码生成（0.7.4 版异步重构）；CrewAI 最简单，适合角色明确的团队协作和快速原型；LangGraph 最成熟，适合需要精细流程控制的生产环境；AgentScope 适合大规模并发和分布式部署的生产级系统（消息驱动 + MsgHub）；CAMEL 适合双 Agent 深度协作场景（角色扮演 + Inception Prompting）。快速验证选 CrewAI/CAMEL，生产部署选 LangGraph/AgentScope。
 
 ### Q2: AutoGen 的 UserProxyAgent 和 AssistantAgent 分别是什么角色？
 **答：** AssistantAgent 是 AI 助手，负责推理和生成（如写代码）。UserProxyAgent 代表用户，可以自动执行 AssistantAgent 生成的代码并返回结果，形成"生成-执行-反馈"的闭环。

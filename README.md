@@ -23,19 +23,19 @@ Android 高级开发完整知识体系，涵盖 10 个模块、61 篇文档。
 
 ### 🤖 [Agent AI 学习](Agent%20AI学习/)
 
-AI Agent 开发学习知识体系，涵盖 9 个模块、20 篇文档。
+AI Agent 开发学习知识体系，涵盖 11 个模块、45 篇文档。
 
 | 模块 | 核心内容 |
 |------|---------|
-| 基础概念 | AI Agent 概念、LLM 基础、Prompt Engineering、Harness Engineering |
-| 框架与工具 | LangChain、LlamaIndex、AutoGen/CrewAI |
-| RAG检索增强生成 | RAG 原理与架构、向量数据库、优化策略 |
-| Agent设计模式 | ReAct、Plan-and-Execute、Multi-Agent 协作 |
+| 基础概念 | AI Agent 概念、智能体发展史、LLM 基础、Prompt Engineering、上下文工程 |
+| 框架与工具 | LangChain、LlamaIndex、AutoGen/AgentScope/CAMEL、低代码平台、自建框架 |
+| RAG检索增强生成 | RAG 原理与架构、向量数据库、混合检索、MQE、结构感知分块 |
+| Agent设计模式 | ReAct、Plan-and-Execute、Reflection、从零实现范式、Multi-Agent 协作 |
 | Function Calling | 原理与实践、自定义工具、MCP 协议 |
-| 记忆与状态管理 | 短期/长期记忆、状态持久化 |
-| 应用实战 | 知识库问答、代码助手、数据分析 Agent |
+| 记忆与状态管理 | 认知科学理论、短期/长期记忆、知识图谱、遗忘策略 |
+| 应用实战 | 知识库问答、深度研究 Agent、Agent 记忆与状态实战 |
 | 部署与优化 | 部署架构、性能优化、成本控制、监控 |
-| 扩展知识 | 端侧推理、多模态 AI、评测体系 |
+| 扩展知识 | 端侧推理、多模态 AI、评测体系、智能体通信协议、Agentic 强化学习 |
 
 ### 💻 [LeetCode 刷题](LeetCode刷题/)
 

@@ -7,3 +7,5 @@
 - [[1-LangChain框架详解]] — 最流行的 LLM 应用开发框架
 - [[2-LlamaIndex框架详解]] — 专注数据索引和检索的框架
 - [[3-AutoGen与多Agent框架]] — 微软 AutoGen、CrewAI 等多 Agent 协作框架
+- [[4-低代码Agent平台]] — Coze、Dify、n8n 等低代码平台选型与实战
+- [[5-构建自定义Agent框架]] — 从零构建轻量级 Agent 框架的设计思想与实践

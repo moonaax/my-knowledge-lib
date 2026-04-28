@@ -4,7 +4,7 @@
 > **本文定位：** 基础 RAG 能跑但效果一般。本文介绍从索引、检索、生成三个阶段的进阶优化策略，以及 CRAG、Self-RAG、Graph RAG 三种高级架构。这些是把 RAG 从"能用"提升到"好用"的关键。
 ## 1. 概述
 
-基础 RAG 在实际应用中常遇到检索不准、回答不完整等问题。本文介绍一系列进阶优化策略。
+基础 RAG 在实际应用中常遇到检索不准、回答不完整等问题。本文介绍一系列进阶优化策略。RAG 技术的发展经历了三个阶段：**朴素 RAG**（TF-IDF/BM25 关键词匹配）→ **高级 RAG**（稠密嵌入语义检索 + 查询优化）→ **模块化 RAG**（混合检索、MQE、自我反思，各模块可插拔组合）。本文的优化策略主要覆盖第二和第三阶段的技术。
 
 ````
 基础 RAG 的常见问题:
@@ -335,7 +335,315 @@ Graph RAG: 文本 → 实体/关系提取 → 知识图谱 → 图检索 + 向�
 3. 针对性优化
 4. 回归测试（确保不影响已有好的 Case）
 5. 重复迭代
+`````
+
+> **RAG 技术并非一步到位，而是经历了从简单到复杂的演进过程。** 理解这个演进脉络，有助于我们在实际项目中选择合适的技术方案——不必追求最前沿，够用就好。
+## 7. RAG 技术发展历程
+
+RAG 技术的发展可以划分为三个阶段，每个阶段都在前一阶段的基础上解决了关键痛点：
+
 ````
+┌─────────────────────────────────────────────────────────────────────┐
+│  第一阶段：朴素 RAG（Naive RAG, 2020-2021）                         │
+│  ─────────────────────────────────────────                          │
+│  检索方式：TF-IDF / BM25 等关键词匹配                               │
+│  生成方式：检索文档直接拼接到 Prompt                                  │
+│  优点：实现简单，无需训练                                             │
+│  缺点：无法理解语义相似性，"同义不同词"会漏检                         │
+├─────────────────────────────────────────────────────────────────────┤
+│  第二阶段：高级 RAG（Advanced RAG, 2022-2023）                       │
+│  ─────────────────────────────────────────                          │
+│  检索方式：稠密嵌入（Dense Embedding）语义检索                        │
+│  生成方式：查询重写、文档分块优化、重排序（Reranker）                  │
+│  优点：能理解语义，检索精度大幅提升                                    │
+│  缺点：单一向量检索仍有局限，复杂问题难以处理                          │
+├─────────────────────────────────────────────────────────────────────┤
+│  第三阶段：模块化 RAG（Modular RAG, 2023-至今）                      │
+│  ─────────────────────────────────────────                          │
+│  检索方式：混合检索、多查询扩展（MQE）、HyDE                          │
+│  生成方式：思维链推理、自我反思与修正                                  │
+│  优点：各模块可插拔组合，适应多样化场景                                │
+│  趋势：与 Agent、记忆系统深度融合                                     │
+└─────────────────────────────────────────────────────────────────────┘
+````
+
+> 🔑 **关键认知：** 当前主流的 RAG 系统处于第二到第三阶段之间。朴素 RAG 的 TF-IDF/BM25 并未被淘汰——它们与稠密检索组合成混合检索，反而成为模块化 RAG 的重要组成部分。
+
+> **索引阶段的分块策略直接决定了检索质量的上限。** 前文介绍了 RecursiveCharacterTextSplitter，但在处理结构化文档（Markdown、技术文档）时，按文档结构分块比按字符数分块效果好得多。
+## 8. Markdown 结构感知分块
+
+### 8.1 为什么需要结构感知分块
+
+`RecursiveCharacterTextSplitter` 按固定字符数切分，不理解文档结构。这会导致：
+- 标题与正文被切到不同 chunk，丢失上下文
+- 代码块被从中间截断
+- 列表项被拆散
+
+对于 Markdown 格式的文档，利用标题层次（`#`、`##`、`###`）进行语义分割，能显著提升 chunk 的语义完整性。
+
+### 8.2 核心实现思路
+
+````python
+def split_markdown_by_headings(text: str) -> list:
+    """根据标题层次分割 Markdown，保持语义完整性"""
+    lines = text.splitlines()
+    heading_stack = []  # 维护当前标题路径：["一级标题", "二级标题", ...]
+    paragraphs = []
+    buf = []
+
+    def flush():
+        """将缓冲区内容作为一个段落输出"""
+        if not buf:
+            return
+        content = "\n".join(buf).strip()
+        if content:
+            paragraphs.append({
+                "content": content,
+                "heading_path": " > ".join(heading_stack) if heading_stack else None,
+            })
+        buf.clear()
+
+    for line in lines:
+        if line.strip().startswith("#"):
+            flush()  # 遇到新标题，先输出之前积累的段落
+            level = len(line) - len(line.lstrip('#'))
+            title = line.lstrip('#').strip()
+            # 维护标题栈：同级或更低级别的标题替换栈中对应位置
+            heading_stack = heading_stack[:level - 1]
+            heading_stack.append(title)
+        elif line.strip() == "":
+            flush()  # 空行作为段落分隔
+        else:
+            buf.append(line)
+
+    flush()
+    return paragraphs
+
+# ── 段落合并为 chunk（按 Token 数控制大小）──
+def chunk_paragraphs(paragraphs, chunk_tokens=500, overlap_tokens=50):
+    """将段落按 Token 数合并为 chunk，支持重叠"""
+    chunks, cur, cur_tokens = [], [], 0
+
+    for p in paragraphs:
+        p_tokens = approx_token_len(p["content"])
+        if cur_tokens + p_tokens > chunk_tokens and cur:
+            # 生成当前 chunk
+            content = "\n\n".join(x["content"] for x in cur)
+            heading_path = next(
+                (x["heading_path"] for x in reversed(cur) if x.get("heading_path")),
+                None
+            )
+            chunks.append({"content": content, "heading_path": heading_path})
+            # 保留尾部作为重叠
+            cur, cur_tokens = build_overlap(cur, overlap_tokens)
+
+        cur.append(p)
+        cur_tokens += p_tokens
+
+    if cur:
+        content = "\n\n".join(x["content"] for x in cur)
+        heading_path = next(
+            (x["heading_path"] for x in reversed(cur) if x.get("heading_path")),
+            None
+        )
+        chunks.append({"content": content, "heading_path": heading_path})
+
+    return chunks
+````
+
+> **关键代码解读（Markdown 结构感知分块）：**
+> - `heading_stack` 维护当前的标题路径（如 "RAG优化 > 检索策略 > 混合检索"），每个 chunk 都携带这个路径作为元数据
+> - 遇到新标题时自动 flush 缓冲区，保证标题和正文在同一个 chunk
+> - 按 Token 数而非字符数控制 chunk 大小，更贴合 Embedding 模型的输入限制
+
+### 8.3 中英文混合 Token 估算
+
+分块需要精确控制 Token 数，但中英文混合文本的 Token 计算不同：
+
+````python
+def approx_token_len(text: str) -> int:
+    """中英文混合 Token 估算"""
+    # CJK 字符：每个字符约 1 token
+    cjk_count = sum(1 for ch in text if '一' <= ch <= '鿿')
+    # 非 CJK 字符：按空格分词估算
+    non_cjk = text
+    for ch in text:
+        if '一' <= ch <= '鿿':
+            non_cjk = non_cjk.replace(ch, ' ')
+    non_cjk_tokens = len(non_cjk.split())
+    return cjk_count + non_cjk_tokens
+````
+
+> 🔑 **为什么不用 tiktoken？** tiktoken 是 OpenAI 的 Token 计数器，对中文的计算不准确（一个汉字可能被拆成 2-3 个 token）。上面的估算方式更贴近实际的 Embedding 模型行为，且零依赖。
+
+> **统一文档格式是模块化 RAG 的重要设计决策。** 现实中的知识库来源多样——PDF、Word、Excel、图片、音频——如果每种格式都用不同的处理管线，维护成本极高。统一转换为 Markdown 后，后续的分块、向量化、检索都可以复用同一套逻辑。
+## 9. MarkItDown 统一文档转换
+
+### 9.1 核心思路
+
+MarkItDown 是微软开源的通用文档转换工具，能将几乎所有常见格式统一转换为 Markdown：
+
+````
+输入格式                     转换方式
+────────────────────────────────────────
+PDF                        → 结构化 Markdown（保留标题/表格）
+Word (.docx)               → Markdown（保留格式）
+Excel (.xlsx)              → Markdown 表格
+PowerPoint (.pptx)         → Markdown（按页提取）
+图片 (JPG/PNG)             → OCR → Markdown
+音频 (MP3/WAV)             → 语音转录 → Markdown
+代码文件                   → 代码块 Markdown
+HTML / CSV / JSON / XML    → Markdown
+````
+
+### 9.2 使用示例
+
+````python
+from markitdown import MarkItDown
+
+md = MarkItDown()
+
+# 统一转换接口
+result = md.convert("report.pdf")
+markdown_text = result.text_content  # 结构化 Markdown
+
+# 后续流程统一：Markdown → 分块 → 向量化 → 存储
+chunks = split_markdown_by_headings(markdown_text)
+index_chunks(chunks)
+````
+
+### 9.3 与分块的配合
+
+MarkItDown 的最大价值在于：所有格式转换后都是标准 Markdown，可以直接用上一节的结构感知分块策略处理。这形成了一个清晰的管线：
+
+````
+任意格式文档 → MarkItDown → Markdown → 结构感知分块 → 向量化 → 检索
+````
+
+> 🔑 **PDF 增强处理：** 对于复杂 PDF（扫描件、多栏排版），MarkItDown 可能不够用。实践中建议对 PDF 做增强处理——先用 OCR 引擎（如 PaddleOCR）提取文本，再交给 MarkItDown 做格式化。
+
+> **查询改写只改写了"一个"查询，而 MQE 会生成"多个"语义等价查询。** 这个看似微小的差异，在实际效果上差距显著——同一个问题的不同表述可能匹配到完全不同的文档子集。
+## 10. 多查询扩展（MQE）
+
+### 10.1 与查询改写的区别
+
+前文 3.1 节的查询改写是将一个问题改写为多个角度的查询。MQE（Multi-Query Expansion）更进一步：用 LLM 生成多个**语义等价但表述不同**的查询，分别检索后合并去重。
+
+核心区别：
+- **查询改写**：侧重"角度变换"（专业术语 → 口语化 → 场景化）
+- **MQE**：侧重"语义等价"（同一个意思的多种说法），且有标准化的扩展-检索-合并流程
+
+### 10.2 实现流程
+
+````python
+def multi_query_expansion(query: str, n: int = 3) -> list:
+    """MQE：用 LLM 生成 N 个语义等价查询"""
+    prompt = f"""你是检索查询扩展助手。请将以下查询生成 {n} 个语义等价但表述不同的查询。
+    要求：使用中文，简短，避免标点，每行一个。
+
+    原始查询：{query}"""
+
+    response = llm.invoke(prompt)
+    expanded = [line.strip("- \t") for line in response.splitlines() if line.strip()]
+    return expanded[:n] or [query]
+
+def search_with_mqe(query: str, retriever, top_k: int = 8):
+    """MQE 扩展检索：扩展 → 并行检索 → 合并去重"""
+    # 1. 生成扩展查询
+    expansions = [query] + multi_query_expansion(query, n=3)
+
+    # 2. 每个查询独立检索
+    seen = {}  # memory_id → best_score，用于去重
+    per_query_k = max(top_k * 2, 20) // len(expansions)
+
+    for q in expansions:
+        results = retriever.similarity_search(q, k=per_query_k)
+        for doc in results:
+            doc_id = doc.metadata.get("id")
+            score = doc.metadata.get("score", 0)
+            if doc_id not in seen or score > seen[doc_id]["score"]:
+                seen[doc_id] = {"doc": doc, "score": score}
+
+    # 3. 按分数排序，取 top_k
+    merged = sorted(seen.values(), key=lambda x: x["score"], reverse=True)
+    return [item["doc"] for item in merged[:top_k]]
+````
+
+> **关键代码解读（MQE）：**
+> - `multi_query_expansion` 用 LLM 生成 N 个语义等价查询（如 "如何学习Python" → "Python入门教程"、"Python学习方法"、"Python编程指南"）
+> - 每个扩展查询独立检索，扩大候选池
+> - 用 `seen` 字典去重，同一文档只保留最高分数
+> - MQE 对模糊查询和专业术语查询效果尤其显著，召回率可提升 30%-50%
+
+> 🔑 **MQE vs HyDE：** MQE 生成的是"不同说法的问题"，HyDE 生成的是"假设性的答案"。两者互补：MQE 解决用词多样性问题，HyDE 解决问题-文档语义鸿沟问题。对高召回率场景建议同时启用。
+
+> **RAG 和记忆系统不是互斥的，而是互补的。** RAG 负责从外部知识库检索，记忆系统负责存储交互历史和学习积累。两者的协同能让 Agent 既"博学"（有知识库）又"记仇"（有记忆）。
+## 11. RAG 与记忆系统的协同
+
+### 11.1 为什么需要协同
+
+单独的 RAG 系统有一个盲区：它只负责"查资料"，不记录"查过什么"。用户第二次问同样的问题，RAG 会重新检索，浪费资源且无法利用之前的回答质量反馈。
+
+记忆系统（Memory System）解决了这个问题——它存储交互历史、学习经历和抽象知识，让 Agent 能"记住"过去的检索结果和用户反馈。
+
+### 11.2 协同架构
+
+````
+用户提问
+   │
+   ├──→ 记忆系统检索：是否有相关的历史经验？
+   │         │
+   │         ├── 有 → 将历史经验注入 Prompt 作为参考
+   │         └── 无 → 继续
+   │
+   ├──→ RAG 检索：从知识库中检索相关文档
+   │
+   ├──→ LLM 生成回答（融合检索结果 + 历史经验）
+   │
+   └──→ 将本次检索结果自动存入记忆系统
+            ├── 工作记忆：当前对话上下文
+            ├── 情景记忆：本次问答事件（带时间戳）
+            └── 语义记忆：提取的知识点（持久化）
+````
+
+### 11.3 关键实现：检索结果自动存入记忆
+
+````python
+def rag_with_memory(question, rag_tool, memory_tool):
+    """RAG 检索 + 记忆协同"""
+    # 1. 先查记忆：是否有相关历史经验
+    history = memory_tool.execute("search", query=question, limit=3)
+
+    # 2. RAG 检索知识库
+    answer = rag_tool.execute("ask", question=question, limit=5)
+
+    # 3. 将检索结果自动存入记忆系统
+    memory_tool.execute("add",
+        content=f"问题: {question}\n回答摘要: {answer[:200]}",
+        memory_type="episodic",     # 情景记忆：记录这次问答事件
+        importance=0.7,
+        event_type="qa_interaction"
+    )
+
+    # 4. 如果回答中有高价值知识点，存入语义记忆（持久化）
+    if is_high_value(answer):
+        memory_tool.execute("add",
+            content=extract_knowledge(answer),
+            memory_type="semantic",  # 语义记忆：抽象知识，长期保存
+            importance=0.9
+        )
+
+    return answer
+````
+
+> **关键代码解读（RAG + 记忆协同）：**
+> - 先查记忆再查 RAG，避免重复检索
+> - 每次 RAG 检索的结果自动写入情景记忆，形成知识积累
+> - 高价值知识点升级为语义记忆（持久化），不会被遗忘策略清理
+> - 这种"检索→生成→记忆"的闭环让 Agent 越用越聪明
+
+> 🔑 **记忆整合（Consolidation）机制：** 工作记忆中的临时信息，如果重要性超过阈值（如 0.7），会被自动"整合"为情景记忆或语义记忆。这模拟了人类大脑将短期记忆转化为长期记忆的过程。经过多次整合，Agent 的语义记忆会逐渐形成一个结构化的知识体系。
+
 ---
 
 ## 面试题精选
@@ -357,3 +665,15 @@ Graph RAG: 文本 → 实体/关系提取 → 知识图谱 → 图检索 + 向�
 
 ### Q6: Graph RAG 相比传统向量 RAG 有什么优势？
 **答：** Graph RAG 结合知识图谱，能理解实体之间的关系，支持多跳推理（如"A 的老板的公司在哪"），全局摘要能力更强。传统向量 RAG 只能做语义相似度匹配，难以处理需要关系推理的复杂问题。
+
+### Q7: RAG 技术经历了哪几个发展阶段？各阶段的核心特征是什么？
+**答：** 三个阶段：(1) 朴素 RAG（2020-2021）——TF-IDF/BM25 关键词匹配，文档直接拼接到 Prompt；(2) 高级 RAG（2022-2023）——稠密嵌入语义检索，引入查询重写、分块优化、Reranker；(3) 模块化 RAG（2023-至今）——混合检索、MQE、HyDE，各模块可插拔组合，与 Agent 和记忆系统深度融合。当前主流处于第二到第三阶段之间。
+
+### Q8: 多查询扩展（MQE）和查询改写有什么区别？
+**答：** 查询改写侧重"角度变换"（专业术语、口语化、场景化），MQE 侧重"语义等价"（同一意思的多种说法）。MQE 有标准化的扩展-检索-合并流程：LLM 生成 N 个等价查询 → 分别检索 → 去重合并 → 按分数排序。MQE 对模糊查询和专业术语查询效果显著，召回率可提升 30%-50%。
+
+### Q9: Markdown 结构感知分块相比 RecursiveCharacterTextSplitter 有什么优势？
+**答：** RecursiveCharacterTextSplitter 按固定字符数切分，不理解文档结构，会导致标题与正文分离、代码块被截断。结构感知分块利用 Markdown 标题层次（#/##/###）进行语义分割，每个 chunk 携带 heading_path 元数据，保证标题和正文在同一个 chunk 中。按 Token 数控制大小，更贴合 Embedding 模型输入限制。
+
+### Q10: RAG 和记忆系统如何协同工作？
+**答：** RAG 负责从外部知识库检索文档，记忆系统负责存储交互历史和学习积累。协同流程：先查记忆是否有相关历史经验 → RAG 检索知识库 → LLM 融合两者生成回答 → 检索结果自动存入情景记忆，高价值知识点存入语义记忆（持久化）。通过记忆整合机制，工作记忆中的重要信息会被升级为长期记忆，形成"检索→生成→记忆"的知识积累闭环。

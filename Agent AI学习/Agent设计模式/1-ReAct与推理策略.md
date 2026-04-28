@@ -169,6 +169,62 @@ result = executor.invoke({"input": "计算 2024 年 Q1 的同比增长率，去�
 | 适合复杂多步任务 | 依赖 LLM 的推理能力 |
 
 
+### 3.5 从零实现 ReAct 的关键差异
+
+上面用 LangChain 的 `AgentExecutor` 封装了 ReAct，省去了大量工程细节。但从零实现时，有几个关键点值得注意：
+
+#### 正则解析 LLM 输出
+
+框架封装版自动解析 LLM 输出，从零实现则需要自己用正则表达式提取 `Thought` 和 `Action`：
+
+````python
+import re
+
+def parse_react_output(text: str):
+    """从 LLM 原始输出中提取 Thought 和 Action。"""
+    thought_match = re.search(r"Thought:\s*(.*?)(?=\nAction:|$)", text, re.DOTALL)
+    action_match = re.search(r"Action:\s*(.*?)$", text, re.DOTALL)
+    thought = thought_match.group(1).strip() if thought_match else None
+    action = action_match.group(1).strip() if action_match else None
+    return thought, action
+
+def parse_action(action_text: str):
+    """从 Action 字符串中提取工具名和输入，如 Search[query]。"""
+    match = re.match(r"(\w+)\[(.*)\]", action_text, re.DOTALL)
+    if match:
+        return match.group(1), match.group(2)
+    return None, None
+````
+
+> 🔑 **正则解析的脆弱性：** 这是从零实现中最容易出问题的地方。LLM 可能输出多余换行、缺少冒号、格式偏差等，导致正则匹配失败。框架（如 LangChain）内部有大量容错逻辑和重试机制来处理这些情况，自己实现时需要格外注意边界情况。
+
+#### 调试技巧
+
+从零实现时，**打印每轮中间状态**是最重要的调试手段：
+
+````python
+# 在 while 循环的每一轮中打印
+print(f"--- 第 {step} 步 ---")
+print(f"完整提示词:\n{prompt}")          # 检查输入是否正确
+print(f"LLM 原始输出:\n{response_text}")  # 检查输出格式
+print(f"解析结果: thought={thought}, action={action}")  # 检查解析
+print(f"工具返回: {observation}")         # 检查工具执行
+````
+
+当输出解析失败时，务必将 LLM 返回的**原始文本**打印出来——这能帮助判断是 LLM 没遵循格式，还是解析逻辑有误。
+
+#### 与框架封装版的本质区别
+
+| 维度 | 框架封装（LangChain） | 从零实现 |
+|------|----------------------|---------|
+| 输出解析 | 自动处理格式偏差、容错重试 | 需要自己写正则 + 处理异常 |
+| 工具调用 | `@tool` 装饰器 + 自动参数注入 | 手动注册 + 手动分发 |
+| 循环控制 | `AgentExecutor` 内置最大步数 + 错误处理 | 需要自己实现 `while` 循环 + 安全阀 |
+| 记忆管理 | `agent_scratchpad` 自动拼接 | 需要自己维护 `history` 列表 |
+| 学习价值 | 关注"怎么用" | 理解"怎么运转" |
+
+> 🔑 **从零实现的核心价值：** 不是为了替代框架，而是理解框架在背后做了什么。当你知道正则解析的脆弱性、循环终止的边界条件、历史记录的拼接方式后，使用框架时才能在出问题时快速定位原因，而不是黑盒调用。
+
 > **从线性到树形：** CoT 和 ReAct 都是线性推理，ToT 引入了"分支探索"的概念，更接近人类面对复杂问题时的思考方式——先想几个方向，评估哪个最靠谱，再深入。
 ## 4. Tree of Thought (ToT) — 思维树
 
@@ -277,6 +333,105 @@ def reflexion_agent(task: str, max_retries: int = 3) -> str:
 >
 > **实际应用：** 代码生成场景特别适合 Reflexion——生成代码 → 运行测试 → 测试失败 → 反思错误原因 → 重新生成。
 ````
+
+### 5.3 Reflection 完整实现 — Memory 模块与迭代优化
+
+上面的 `reflexion_agent` 只是一个简化版本。真正健壮的 Reflection 实现需要一个**记忆模块**来管理迭代历史，以及精心设计的**多角色提示词**来分别驱动执行、反思和优化。
+
+#### 5.3.1 Memory 类设计
+
+Reflection 的核心是迭代，而迭代的前提是记住每次尝试和反馈。Memory 类承担这个职责：
+
+````python
+from typing import List, Dict, Any, Optional
+
+class Memory:
+    """短期记忆模块，存储执行与反思的完整轨迹。"""
+
+    def __init__(self):
+        self.records: List[Dict[str, Any]] = []
+
+    def add_record(self, record_type: str, content: str):
+        """添加记录。record_type: 'execution' 或 'reflection'"""
+        self.records.append({"type": record_type, "content": content})
+
+    def get_trajectory(self) -> str:
+        """将所有记录格式化为连贯文本，用于构建提示词上下文。"""
+        parts = []
+        for r in self.records:
+            if r['type'] == 'execution':
+                parts.append(f"--- 上一轮尝试 ---\n{r['content']}")
+            elif r['type'] == 'reflection':
+                parts.append(f"--- 评审反馈 ---\n{r['content']}")
+        return "\n\n".join(parts)
+
+    def get_last_execution(self) -> Optional[str]:
+        """获取最近一次的执行结果。"""
+        for r in reversed(self.records):
+            if r['type'] == 'execution':
+                return r['content']
+        return None
+````
+
+> 🔑 **设计要点：** `get_trajectory()` 将完整历史序列化为文本，直接插入提示词；`get_last_execution()` 则只取最新版本供反思和优化使用。两者的分工避免了上下文膨胀——反思时不需要翻阅所有历史，只需要最新代码和最新反馈。
+
+#### 5.3.2 迭代代码优化案例
+
+一个经典的 Reflection 案例是**代码生成与迭代优化**。任务："编写一个 Python 函数，找出 1 到 n 之间所有的素数。"
+
+典型的迭代过程：
+
+````text
+初始执行 → 生成试除法代码 O(n * sqrt(n))
+第 1 轮反思 → "时间复杂度过高，建议使用埃拉托斯特尼筛法"
+第 1 轮优化 → 生成筛法代码 O(n log log n)
+第 2 轮反思 → "算法已足够高效，无需改进" → 终止
+````
+
+> 🔑 **关键洞察：** Reflection 的价值不仅在于修复错误，更在于**驱动方案在质量和效率上实现阶梯式提升**。从试除法到筛法的跨越，不是简单的 bug 修复，而是算法层面的质变。这正是"评审员"角色设定为"极其严格的算法工程师"的效果——它不会满足于"功能正确"，而是追求"算法最优"。
+
+整个流程由三套提示词协同驱动：
+- **执行提示词**：要求生成代码，角色为"资深 Python 程序员"
+- **反思提示词**：要求批判性分析，角色为"严格的代码评审专家"，重点关注算法效率
+- **优化提示词**：要求根据反馈修改，同时保留原始任务约束
+
+> 🔑 **提示词角色的影响：** 反思提示词中"极其严格"和"专注于算法效率"的措辞直接决定了优化方向。如果改为"注重代码可读性的维护者"，优化方向就会变为命名规范、注释完善等，而非算法改进。角色设定是 Reflection 最容易被忽视但影响最大的设计决策。
+
+### 5.4 Reflection 的成本收益分析
+
+Reflection 是典型的**以成本换质量**的策略。是否使用，取决于任务的性质。
+
+#### 成本
+
+| 成本项 | 说明 |
+|--------|------|
+| API 调用倍增 | 每轮迭代至少 2 次 LLM 调用（反思 + 优化），多轮迭代成本成倍增长 |
+| 延迟显著增加 | 串行执行，每轮优化必须等上轮反思完成，不适合实时场景 |
+| 提示词工程复杂 | 执行/反思/优化三套提示词需分别设计和调试 |
+
+#### 收益
+
+| 收益项 | 说明 |
+|--------|------|
+| 方案质量跃迁 | 从"合格"到"优秀"的质变，而非线性改善 |
+| 鲁棒性增强 | 内部纠错回路可发现逻辑漏洞、边界情况、事实错误 |
+| 可组合性 | 可与 ReAct 结合——用 ReAct 执行，用 Reflection 事后优化 |
+
+#### 何时值得反思
+
+````text
+值得反思：
+  ✅ 代码生成（有明确的正确性/效率标准）
+  ✅ 关键业务报告（质量要求极高）
+  ✅ 复杂逻辑推演（容易出错且后果严重）
+
+不值得反思：
+  ❌ 简单问答（一次 CoT 就够了）
+  ❌ 实时对话（延迟不可接受）
+  ❌ 大致正确即可的场景（成本不划算）
+````
+
+> 🔑 **生产环境建议：** Reflexion 不是万能药。一个务实的做法是**设置 1-2 轮上限**，配合一个可靠的终止条件（如反思中出现"无需改进"或置信度超过阈值），在质量和成本之间取得平衡。
 
 > **如何选择：** 简单问答用 CoT（零成本提升），需要调用工具用 ReAct（最常用），复杂规划用 Plan-and-Execute，需要创造性方案用 ToT，需要高质量输出用 Reflexion。生产环境推荐 ReAct + Reflexion 组合。
 ## 6. 策略选型指南
